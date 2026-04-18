@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Station Staff Assistant</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --fuel:#FF6B00;--fuel-l:#FF8C00;--dark:#0A0A0F;--panel:#13131A;
+  --card:#1C1C28;--card2:#22222F;--border:#2A2A3A;
+  --text:#E8E8F0;--muted:#6B6B88;--green:#00D68F;--red:#FF4D6A;
+  --blue:#4D9FFF;--yellow:#FFD166;--purple:#B06EFF;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--dark);color:var(--text);font-family:'DM Sans',sans-serif;height:100dvh;display:flex;flex-direction:column;overflow:hidden;}
+
+/* ══ SETUP ══ */
+#setupScreen{position:fixed;inset:0;background:var(--dark);z-index:500;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;animation:fadeIn .4s ease;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+.setup-logo{width:60px;height:60px;border-radius:50%;background:conic-gradient(var(--fuel),var(--fuel-l),var(--fuel));display:grid;place-items:center;margin-bottom:18px;animation:spin 9s linear infinite;}
+.setup-logo span{font-size:24px;animation:spin 9s linear infinite reverse;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.setup-box{background:var(--panel);border:1px solid var(--border);border-radius:20px;padding:26px 22px;width:100%;max-width:400px;}
+.setup-box h1{font-family:'Syne',sans-serif;font-size:19px;font-weight:800;text-align:center;margin-bottom:4px;}
+.setup-box > p{font-size:12.5px;color:var(--muted);text-align:center;margin-bottom:20px;line-height:1.5;}
+.sf label{display:block;font-size:10.5px;font-weight:500;color:var(--muted);letter-spacing:.05em;text-transform:uppercase;margin-bottom:5px;}
+.sf input,.sf select{width:100%;background:var(--card);border:1px solid var(--border);border-radius:11px;padding:11px 13px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13.5px;outline:none;transition:border-color .2s;margin-bottom:12px;}
+.sf input:focus,.sf select:focus{border-color:var(--fuel);}
+.sf select option{background:var(--panel);}
+.btn-setup{width:100%;padding:13px;border-radius:12px;border:none;background:var(--fuel);color:#fff;font-family:'Syne',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:all .2s;}
+.btn-setup:hover{background:var(--fuel-l);}
+.setup-note{font-size:11px;color:var(--muted);text-align:center;margin-top:12px;line-height:1.6;}
+.fb-config-link{font-size:11.5px;color:var(--muted);text-align:center;margin-top:10px;}
+.fb-config-link a{color:var(--fuel);cursor:pointer;text-decoration:underline;}
+#fbConfigSection{display:none;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;margin-top:14px;}
+.setup-status{font-size:12px;color:var(--muted);text-align:center;min-height:18px;margin-top:6px;}
+.setup-status.ok{color:var(--green);}
+.setup-status.err{color:var(--red);}
+
+/* ══ NAV ══ */
+.nav{display:flex;background:var(--panel);border-bottom:1px solid var(--border);flex-shrink:0;overflow-x:auto;scrollbar-width:none;}
+.nav::-webkit-scrollbar{display:none;}
+.nav-tab{flex:1;min-width:72px;padding:12px 6px;text-align:center;font-family:'Syne',sans-serif;font-size:10.5px;font-weight:700;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;white-space:nowrap;}
+.nav-tab.active{color:var(--fuel);border-bottom-color:var(--fuel);}
+.nav-tab:hover:not(.active){color:var(--text);}
+
+/* ══ VIEWS ══ */
+.view{display:none;flex:1;flex-direction:column;overflow:hidden;}
+.view.active{display:flex;}
+
+/* ══ CHAT ══ */
+.chat-header{background:var(--panel);border-bottom:1px solid var(--border);padding:11px 14px;display:flex;align-items:center;gap:11px;flex-shrink:0;}
+.logo-sm{width:34px;height:34px;border-radius:50%;background:conic-gradient(var(--fuel),var(--fuel-l),var(--fuel));display:grid;place-items:center;position:relative;animation:spin 9s linear infinite;flex-shrink:0;}
+.logo-sm::after{content:'⛽';font-size:14px;position:absolute;animation:spin 9s linear infinite reverse;}
+.hinfo h1{font-family:'Syne',sans-serif;font-size:14px;font-weight:800;}
+.hinfo p{font-size:11px;color:var(--muted);margin-top:1px;}
+.header-right{margin-left:auto;display:flex;align-items:center;gap:8px;}
+.sync-pill{display:flex;align-items:center;gap:4px;font-size:10.5px;color:var(--green);}
+.sync-dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 5px var(--green);animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
+.sync-dot.off{background:var(--muted);box-shadow:none;animation:none;}
+.station-badge{background:rgba(255,107,0,.12);border:1px solid rgba(255,107,0,.25);color:var(--fuel);border-radius:20px;padding:4px 10px;font-size:11px;font-weight:600;white-space:nowrap;}
+#settingsBtn{width:32px;height:32px;border-radius:9px;border:1px solid var(--border);background:var(--card);cursor:pointer;font-size:16px;display:grid;place-items:center;transition:all .2s;flex-shrink:0;}
+#settingsBtn:hover{border-color:var(--fuel);background:rgba(255,107,0,.1);}
+
+.quick-bar{background:var(--panel);border-bottom:1px solid var(--border);padding:7px 12px;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;flex-shrink:0;}
+.quick-bar::-webkit-scrollbar{display:none;}
+.chip{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:5px 11px;font-size:11.5px;color:var(--muted);white-space:nowrap;cursor:pointer;transition:all .2s;flex-shrink:0;}
+.chip:hover{border-color:var(--fuel);color:var(--fuel);background:rgba(255,107,0,.08);}
+
+#chat{flex:1;overflow-y:auto;padding:14px 12px;display:flex;flex-direction:column;gap:12px;scrollbar-width:thin;scrollbar-color:var(--border) transparent;}
+#chat::-webkit-scrollbar{width:4px;}
+#chat::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
+.welcome-card{background:linear-gradient(135deg,#1C1C28,#222236);border:1px solid var(--border);border-radius:16px;padding:18px 16px;text-align:center;}
+.welcome-card h2{font-family:'Syne',sans-serif;font-size:17px;font-weight:800;background:linear-gradient(90deg,var(--fuel),#FFB347);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:4px;}
+.welcome-card p{color:var(--muted);font-size:13px;line-height:1.55;}
+.station-pill{display:inline-block;background:rgba(255,107,0,.12);border:1px solid rgba(255,107,0,.25);color:var(--fuel);border-radius:20px;padding:3px 10px;font-size:12px;font-weight:600;margin-top:8px;}
+
+.msg-row{display:flex;gap:8px;align-items:flex-end;animation:fadeUp .28s ease;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+.msg-row.user{flex-direction:row-reverse;}
+.avatar{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-size:12px;flex-shrink:0;}
+.avatar.ai{background:var(--card);border:1px solid var(--border);}
+.avatar.usr{background:var(--fuel);}
+.bubble{max-width:80%;padding:9px 13px;border-radius:16px;font-size:13px;line-height:1.65;}
+.bubble.ai{background:var(--card);border:1px solid var(--border);border-bottom-left-radius:4px;}
+.bubble.user{background:var(--fuel);color:#fff;border-bottom-right-radius:4px;}
+.bubble.ai strong{color:#FFB347;}
+.bubble.ai code{background:rgba(255,107,0,.15);padding:1px 5px;border-radius:4px;font-size:12px;font-family:monospace;}
+.bubble.ai ol,.bubble.ai ul{padding-left:16px;margin-top:4px;}
+.bubble.ai li{margin-bottom:3px;}
+.bubble.ai p{margin-bottom:4px;}
+.bubble.ai p:last-child{margin-bottom:0;}
+.typing-row{display:flex;gap:8px;align-items:flex-end;}
+.typing-bub{background:var(--card);border:1px solid var(--border);border-radius:16px;border-bottom-left-radius:4px;padding:12px 15px;display:flex;gap:4px;}
+.typing-bub span{width:6px;height:6px;border-radius:50%;background:var(--muted);animation:bounce 1.2s ease-in-out infinite;}
+.typing-bub span:nth-child(2){animation-delay:.2s;}
+.typing-bub span:nth-child(3){animation-delay:.4s;}
+@keyframes bounce{0%,60%,100%{transform:translateY(0);}30%{transform:translateY(-5px);background:var(--fuel);}}
+.input-wrap{background:var(--panel);border-top:1px solid var(--border);padding:10px 12px;display:flex;gap:8px;align-items:flex-end;flex-shrink:0;}
+#userInput{flex:1;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:9px 13px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13.5px;resize:none;outline:none;min-height:40px;max-height:100px;line-height:1.5;transition:border-color .2s;}
+#userInput:focus{border-color:var(--fuel);}
+#userInput::placeholder{color:var(--muted);}
+#sendBtn{width:40px;height:40px;border-radius:11px;background:var(--fuel);border:none;cursor:pointer;display:grid;place-items:center;transition:all .2s;flex-shrink:0;}
+#sendBtn:hover{background:var(--fuel-l);transform:scale(1.05);}
+#sendBtn:disabled{opacity:.4;cursor:not-allowed;transform:none;}
+#sendBtn svg{width:16px;height:16px;fill:white;}
+
+/* ══ SHARED ADMIN HEADER ══ */
+.admin-header{background:var(--panel);border-bottom:1px solid var(--border);padding:11px 14px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;gap:10px;}
+.ahl h2{font-family:'Syne',sans-serif;font-size:14px;font-weight:800;}
+.ahl p{font-size:11px;color:var(--muted);margin-top:2px;}
+.btn-p{background:var(--fuel);color:#fff;border:none;border-radius:9px;padding:8px 13px;font-family:'Syne',sans-serif;font-size:11.5px;font-weight:700;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:5px;white-space:nowrap;}
+.btn-p:hover{background:var(--fuel-l);}
+
+/* ══ KB ══ */
+.scope-bar{background:var(--panel);border-bottom:1px solid var(--border);padding:7px 12px;display:flex;align-items:center;gap:7px;flex-shrink:0;overflow-x:auto;scrollbar-width:none;}
+.scope-bar::-webkit-scrollbar{display:none;}
+.scope-btn{border-radius:20px;padding:4px 11px;font-size:11.5px;font-weight:600;cursor:pointer;transition:all .2s;border:1px solid var(--border);background:var(--card);color:var(--muted);white-space:nowrap;}
+.scope-btn.ag{border-color:var(--blue);color:var(--blue);background:rgba(77,159,255,.08);}
+.scope-btn.al{border-color:var(--fuel);color:var(--fuel);background:rgba(255,107,0,.08);}
+.cat-bar{background:var(--panel);border-bottom:1px solid var(--border);padding:7px 12px;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;flex-shrink:0;}
+.cat-bar::-webkit-scrollbar{display:none;}
+.cat-chip{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:4px 11px;font-size:11.5px;color:var(--muted);white-space:nowrap;cursor:pointer;transition:all .2s;}
+.cat-chip.active,.cat-chip:hover{border-color:var(--fuel);color:var(--fuel);background:rgba(255,107,0,.08);}
+.kb-list{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px;}
+.empty-state{text-align:center;padding:40px 20px;color:var(--muted);}
+.empty-state .icon{font-size:32px;margin-bottom:10px;}
+.kb-card{background:var(--card);border:1px solid var(--border);border-radius:13px;overflow:hidden;transition:border-color .2s;}
+.kb-card:hover{border-color:rgba(255,107,0,.28);}
+.kb-card.gc{border-left:3px solid var(--blue);}
+.kb-card.lc{border-left:3px solid var(--fuel);}
+.kb-card-top{padding:11px 13px;display:flex;align-items:flex-start;gap:9px;cursor:pointer;}
+.kb-icon{font-size:15px;flex-shrink:0;margin-top:1px;}
+.kb-body{flex:1;min-width:0;}
+.kb-q{font-size:13px;font-weight:500;line-height:1.4;}
+.kb-meta{display:flex;align-items:center;gap:5px;margin-top:4px;flex-wrap:wrap;}
+.kb-tag{border-radius:5px;padding:2px 7px;font-size:10.5px;font-weight:600;}
+.tg{background:rgba(77,159,255,.1);color:var(--blue);}
+.tl{background:rgba(255,107,0,.1);color:var(--fuel);}
+.tc{background:var(--card2);color:var(--muted);}
+.kb-chevron{font-size:10px;color:var(--muted);margin-left:auto;transition:transform .2s;flex-shrink:0;margin-top:3px;}
+.kb-card.expanded .kb-chevron{transform:rotate(180deg);}
+.kb-answer{display:none;padding:0 13px 11px 37px;font-size:12.5px;color:var(--muted);line-height:1.65;border-top:1px solid var(--border);padding-top:9px;}
+.kb-card.expanded .kb-answer{display:block;}
+
+/* ══ INCIDENTS ══ */
+.inc-filters{background:var(--panel);border-bottom:1px solid var(--border);padding:7px 12px;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;flex-shrink:0;}
+.inc-filters::-webkit-scrollbar{display:none;}
+.inc-list{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px;}
+.inc-card{background:var(--card);border:1px solid var(--border);border-radius:13px;padding:12px 13px;transition:border-color .2s;}
+.inc-card:hover{border-color:rgba(255,107,0,.2);}
+.inc-top{display:flex;align-items:flex-start;gap:8px;}
+.inc-badge{border-radius:7px;padding:3px 8px;font-size:10.5px;font-weight:700;flex-shrink:0;}
+.badge-low{background:rgba(0,214,143,.12);color:var(--green);}
+.badge-med{background:rgba(255,209,102,.12);color:var(--yellow);}
+.badge-high{background:rgba(255,77,106,.12);color:var(--red);}
+.inc-title{font-size:13px;font-weight:500;flex:1;line-height:1.4;}
+.inc-time{font-size:10.5px;color:var(--muted);margin-left:auto;flex-shrink:0;}
+.inc-stn{background:rgba(176,110,255,.1);color:var(--purple);border-radius:5px;padding:2px 7px;font-size:10.5px;font-weight:600;margin-top:4px;display:inline-block;}
+.inc-desc{font-size:12.5px;color:var(--muted);margin-top:6px;line-height:1.6;}
+.inc-footer{display:flex;align-items:center;justify-content:space-between;margin-top:7px;}
+.inc-staff{font-size:10.5px;color:var(--muted);}
+.inc-resolve{background:transparent;border:1px solid var(--border);border-radius:6px;padding:3px 9px;font-size:11px;color:var(--muted);cursor:pointer;transition:all .2s;}
+.inc-resolve:hover{border-color:var(--green);color:var(--green);}
+.inc-card.resolved{opacity:.5;border-style:dashed;}
+.inc-card.resolved .inc-title{text-decoration:line-through;}
+.resolved-badge{font-size:11px;color:var(--green);font-weight:600;}
+
+/* ══ MODAL ══ */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.78);backdrop-filter:blur(4px);z-index:100;align-items:center;justify-content:center;padding:14px;}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--panel);border:1px solid var(--border);border-radius:18px;width:100%;max-width:460px;max-height:88dvh;display:flex;flex-direction:column;overflow:hidden;animation:mIn .22s ease;}
+@keyframes mIn{from{opacity:0;transform:scale(.95);}to{opacity:1;transform:scale(1);}}
+.modal-head{padding:15px 17px 11px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.modal-head h3{font-family:'Syne',sans-serif;font-size:14px;font-weight:800;}
+.btn-close{width:26px;height:26px;border-radius:7px;border:1px solid var(--border);background:transparent;cursor:pointer;display:grid;place-items:center;font-size:14px;color:var(--muted);transition:all .2s;}
+.btn-close:hover{border-color:var(--red);color:var(--red);}
+.modal-body{padding:15px 17px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;}
+.field label{display:block;font-size:10.5px;font-weight:500;color:var(--muted);margin-bottom:5px;letter-spacing:.05em;text-transform:uppercase;}
+.field input,.field textarea,.field select{width:100%;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:9px 12px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;outline:none;transition:border-color .2s;}
+.field input:focus,.field textarea:focus,.field select:focus{border-color:var(--fuel);}
+.field textarea{resize:vertical;min-height:85px;line-height:1.6;}
+.field select option{background:var(--panel);}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.modal-foot{padding:11px 17px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;}
+.btn-cancel{padding:8px 15px;border-radius:9px;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:'Syne',sans-serif;font-size:11.5px;font-weight:700;cursor:pointer;transition:all .2s;}
+.btn-cancel:hover{border-color:var(--text);color:var(--text);}
+.btn-save{padding:8px 17px;border-radius:9px;border:none;background:var(--fuel);color:#fff;font-family:'Syne',sans-serif;font-size:11.5px;font-weight:700;cursor:pointer;}
+.btn-save:hover{background:var(--fuel-l);}
+
+/* ══ PIN ══ */
+.pin-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.9);backdrop-filter:blur(7px);z-index:300;align-items:center;justify-content:center;}
+.pin-overlay.open{display:flex;}
+.pin-box{background:var(--panel);border:1px solid var(--border);border-radius:18px;padding:24px 20px;text-align:center;width:260px;animation:mIn .22s ease;}
+.pin-box h3{font-family:'Syne',sans-serif;font-size:15px;font-weight:800;margin-bottom:4px;}
+.pin-box p{font-size:11.5px;color:var(--muted);margin-bottom:16px;}
+.pin-dots{display:flex;gap:9px;justify-content:center;margin-bottom:16px;}
+.pin-dot{width:12px;height:12px;border-radius:50%;background:var(--border);transition:background .2s;}
+.pin-dot.filled{background:var(--fuel);}
+.pin-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;}
+.pin-key{background:var(--card);border:1px solid var(--border);border-radius:9px;padding:12px;font-family:'Syne',sans-serif;font-size:15px;font-weight:700;cursor:pointer;transition:all .15s;}
+.pin-key:hover{border-color:var(--fuel);color:var(--fuel);}
+.pin-key:active{transform:scale(.95);}
+.pin-error{color:var(--red);font-size:11.5px;margin-top:7px;min-height:17px;}
+.pin-back{background:transparent;border:none;color:var(--muted);font-size:11.5px;cursor:pointer;margin-top:9px;text-decoration:underline;}
+
+/* toast */
+.toast{position:fixed;bottom:72px;left:50%;transform:translateX(-50%);background:var(--green);color:#000;font-family:'Syne',sans-serif;font-size:12.5px;font-weight:700;padding:9px 18px;border-radius:30px;z-index:400;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap;}
+.toast.show{opacity:1;}
+</style>
+</head>
+<body>
+
+<!-- ══ SETUP SCREEN ══ -->
+<div id="setupScreen">
+  <div class="setup-logo"><span>⛽</span></div>
+  <div class="setup-box">
+    <h1>Station Staff Assistant</h1>
+    <p>First-time setup for this device.<br>Connect to your Firebase project then select this station.</p>
+
+    <div class="sf">
+      <label>Station Name for This Device</label>
+      <input type="text" id="setupStnName" placeholder="e.g. Bleach Service Station"/>
+      <label>Anthropic API Key</label>
+      <input type="password" id="setupAnthropicKey" placeholder="sk-ant-…" autocomplete="off"/>
+    </div>
+
+    <div class="fb-config-link">Need to configure Firebase? <a onclick="toggleFbSection()">Show settings</a></div>
+    <div id="fbConfigSection">
+      <div class="sf" style="margin-top:10px;">
+        <label>Firebase API Key</label><input id="setupApiKey" placeholder="AIza…"/>
+        <label>Auth Domain</label><input id="setupAuthDomain" placeholder="your-project.firebaseapp.com"/>
+        <label>Project ID</label><input id="setupProjectId" placeholder="your-project-id"/>
+        <label>App ID</label><input id="setupAppId" placeholder="1:123…:web:abc…"/>
+      </div>
+    </div>
+
+    <div class="setup-status" id="setupStatus"></div>
+    <button class="btn-setup" onclick="completeSetup()" style="margin-top:12px">✓ Set Up This Device</button>
+    <p class="setup-note">⚙️ This device will be permanently set to this station.<br>Only needs to be done once by a manager.</p>
+  </div>
+</div>
+
+<!-- ══ INCIDENT MODAL ══ -->
+<div class="modal-overlay" id="incModal">
+  <div class="modal">
+    <div class="modal-head"><h3>📋 Log an Incident</h3><button class="btn-close" onclick="closeIncModal()">✕</button></div>
+    <div class="modal-body">
+      <div class="field-row">
+        <div class="field"><label>Your Name</label><input type="text" id="iStaff" placeholder="e.g. Sarah"/></div>
+        <div class="field"><label>Severity</label>
+          <select id="iSev"><option value="low">🟢 Low</option><option value="med" selected>🟡 Medium</option><option value="high">🔴 High</option></select>
+        </div>
+      </div>
+      <div class="field"><label>Incident Type</label>
+        <select id="iType">
+          <option>Drive-Off</option><option>Pump Fault</option><option>EFTPOS Issue</option>
+          <option>Till Discrepancy</option><option>Customer Complaint</option><option>Theft / Shoplifting</option>
+          <option>Safety Hazard</option><option>Equipment Failure</option><option>Medical Emergency</option><option>Other</option>
+        </select>
+      </div>
+      <div class="field"><label>Description</label><textarea id="iDesc" placeholder="Describe what happened — pump number, amount, rego, etc."></textarea></div>
+    </div>
+    <div class="modal-foot"><button class="btn-cancel" onclick="closeIncModal()">Cancel</button><button class="btn-save" onclick="saveIncident()">Log Incident</button></div>
+  </div>
+</div>
+
+<!-- ══ PIN ══ -->
+<div class="pin-overlay" id="pinOverlay">
+  <div class="pin-box">
+    <h3>🔒 Admin Access</h3>
+    <p>Enter manager PIN</p>
+    <div class="pin-dots">
+      <div class="pin-dot" id="pd0"></div><div class="pin-dot" id="pd1"></div>
+      <div class="pin-dot" id="pd2"></div><div class="pin-dot" id="pd3"></div>
+    </div>
+    <div class="pin-pad">
+      <div class="pin-key" onclick="pinPress('1')">1</div><div class="pin-key" onclick="pinPress('2')">2</div><div class="pin-key" onclick="pinPress('3')">3</div>
+      <div class="pin-key" onclick="pinPress('4')">4</div><div class="pin-key" onclick="pinPress('5')">5</div><div class="pin-key" onclick="pinPress('6')">6</div>
+      <div class="pin-key" onclick="pinPress('7')">7</div><div class="pin-key" onclick="pinPress('8')">8</div><div class="pin-key" onclick="pinPress('9')">9</div>
+      <div class="pin-key"></div><div class="pin-key" onclick="pinPress('0')">0</div><div class="pin-key" style="font-size:12px;color:var(--muted)" onclick="pinDel()">⌫</div>
+    </div>
+    <div class="pin-error" id="pinError"></div>
+    <button class="pin-back" onclick="cancelPin()">← Cancel</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- ══ API KEY MODAL ══ -->
+<div class="modal-overlay" id="apiModal">
+  <div class="modal" style="max-width:400px;">
+    <div class="modal-head">
+      <h3>🔑 Enter API Key</h3>
+      <button class="btn-close" onclick="document.getElementById('apiModal').classList.remove('open')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="background:rgba(77,159,255,.08);border:1px solid rgba(77,159,255,.2);border-radius:10px;padding:12px 14px;font-size:12.5px;color:var(--blue);line-height:1.7;">
+        1. Go to <strong>console.anthropic.com</strong><br>
+        2. Click the 🔑 icon in the bottom left<br>
+        3. Click <strong>API Keys → Create Key</strong><br>
+        4. Copy the key (starts with sk-ant-…) and paste below
+      </div>
+      <div class="field">
+        <label>Anthropic API Key</label>
+        <input type="password" id="apiKeyInput" placeholder="sk-ant-api03-…" autocomplete="off"/>
+      </div>
+      <div id="apiKeyCurrent" style="font-size:12px;margin-top:-6px;"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-cancel" onclick="document.getElementById('apiModal').classList.remove('open')">Cancel</button>
+      <button class="btn-save" onclick="saveApiKey()">Save Key</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ NAV ══ -->
+<div class="nav">
+  <div class="nav-tab active" id="tab-chat"   onclick="switchTab('chat')">💬 Chat</div>
+  <div class="nav-tab"        id="tab-kb"     onclick="switchTab('kb')">🗂️ Knowledge</div>
+  <div class="nav-tab"        id="tab-inc"    onclick="switchTab('inc')">📋 Incidents</div>
+</div>
+
+<!-- ════ CHAT VIEW ════ -->
+<div class="view active" id="view-chat">
+  <div class="chat-header">
+    <div class="logo-sm"></div>
+    <div class="hinfo"><h1>Station Assistant</h1><p>AI-powered · Real-time sync</p></div>
+    <div class="header-right">
+      <div class="sync-pill"><div class="sync-dot" id="syncDot"></div><span id="syncLabel">Syncing…</span></div>
+      <div class="station-badge" id="stationBadge">⛽ —</div>
+      <button id="settingsBtn" onclick="openApiModal()" title="Settings">⚙️</button>
+    </div>
+  </div>
+  <div class="quick-bar">
+    <div class="chip" onclick="quickAsk('How do I process a refund on GAP POS?')">💳 Refund</div>
+    <div class="chip" onclick="quickAsk('How do I void a transaction on GAP POS?')">🗑️ Void</div>
+    <div class="chip" onclick="quickAsk('How do I close my shift on GAP POS?')">🔒 Shift Close</div>
+    <div class="chip" onclick="quickAsk('A fuel pump is not working, what do I do?')">⛽ Pump Issue</div>
+    <div class="chip" onclick="quickAsk('The EFTPOS machine is not working, what do I do?')">💻 EFTPOS</div>
+    <div class="chip" onclick="quickAsk('How do I handle a drive-off?')">🚗 Drive-Off</div>
+    <div class="chip" onclick="quickAsk('How do I do a price override?')">🏷️ Override</div>
+    <div class="chip" onclick="quickAsk('What is my station contact number?')">📞 Station Info</div>
+  </div>
+  <div id="chat">
+    <div class="welcome-card">
+      <h2>👋 Hi! I'm your Station Assistant</h2>
+      <p>Ask me anything about your shift — GAP POS, pump issues, procedures, or customer situations.</p>
+      <div class="station-pill" id="welcomeStation">📍 Loading…</div>
+    </div>
+  </div>
+  <div class="input-wrap">
+    <textarea id="userInput" placeholder="Ask about GAP POS, pumps, procedures…" rows="1"></textarea>
+    <button id="sendBtn" onclick="sendMessage()">
+      <svg viewBox="0 0 24 24"><path d="M2 21L23 12 2 3v7l15 2-15 2z"/></svg>
+    </button>
+  </div>
+</div>
+
+<!-- ════ KB VIEW ════ -->
+<div class="view" id="view-kb">
+  <div class="admin-header">
+    <div class="ahl"><h2>🗂️ Knowledge Base</h2><p id="kbCount">Loading…</p></div>
+  </div>
+  <div class="scope-bar">
+    <span style="font-size:11px;color:var(--muted);flex-shrink:0">Show:</span>
+    <div class="scope-btn ag" id="sfAll"    onclick="setSf('all',this)">All</div>
+    <div class="scope-btn"   id="sfGlobal" onclick="setSf('global',this)">🌐 Global</div>
+    <div class="scope-btn"   id="sfLocal"  onclick="setSf('local',this)">📍 This Station</div>
+  </div>
+  <div class="cat-bar">
+    <div class="cat-chip active" onclick="setCat('All',this)">All</div>
+    <div class="cat-chip" onclick="setCat('GAP POS',this)">GAP POS</div>
+    <div class="cat-chip" onclick="setCat('Fuel & Pumps',this)">Fuel & Pumps</div>
+    <div class="cat-chip" onclick="setCat('Cash Handling',this)">Cash Handling</div>
+    <div class="cat-chip" onclick="setCat('Store Operations',this)">Store Ops</div>
+    <div class="cat-chip" onclick="setCat('EFTPOS',this)">EFTPOS</div>
+    <div class="cat-chip" onclick="setCat('Compliance',this)">Compliance</div>
+    <div class="cat-chip" onclick="setCat('Emergency',this)">Emergency</div>
+    <div class="cat-chip" onclick="setCat('Customer Service',this)">Customer</div>
+    <div class="cat-chip" onclick="setCat('Other',this)">Other</div>
+  </div>
+  <div class="kb-list" id="kbList"></div>
+</div>
+
+<!-- ════ INCIDENT VIEW ════ -->
+<div class="view" id="view-inc">
+  <div class="admin-header">
+    <div class="ahl"><h2>📋 Incident Log</h2><p id="incCount">Loading…</p></div>
+    <button class="btn-p" onclick="openIncModal()">＋ Log Incident</button>
+  </div>
+  <div class="inc-filters">
+    <div class="cat-chip active" onclick="setIncF('all',this)">This Station</div>
+    <div class="cat-chip" onclick="setIncF('open',this)">🔴 Open</div>
+    <div class="cat-chip" onclick="setIncF('resolved',this)">✅ Resolved</div>
+    <div class="cat-chip" onclick="setIncF('high',this)">🔴 High</div>
+    <div class="cat-chip" onclick="setIncF('med',this)">🟡 Medium</div>
+    <div class="cat-chip" onclick="setIncF('low',this)">🟢 Low</div>
+  </div>
+  <div class="inc-list" id="incList"></div>
+</div>
+
+<!-- Firebase -->
+<script type="module">
+import { initializeApp }       from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getFirestore, collection, onSnapshot, addDoc, updateDoc, doc, serverTimestamp, query, orderBy, where } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+// ════════════════════════════════════════
+// CONFIG
+// ════════════════════════════════════════
+const ADMIN_PIN    = '1234';   // ← Change this to your PIN
+const KEY_STN      = 'staff_station';
+const KEY_FB       = 'staff_fb_config';
+
+// ════════════════════════════════════════
+// STATE
+// ════════════════════════════════════════
+let db=null, currentStation='', kb=[], incidents=[];
+let kbScopeF='all', kbCatF='All', incF='all';
+let pinBuffer='', pinTarget=null;
+const chatMessages=[];
+
+// ════════════════════════════════════════
+// SETUP
+// ════════════════════════════════════════
+window.toggleFbSection=function(){ const s=document.getElementById('fbConfigSection'); s.style.display=s.style.display==='none'?'block':'none'; };
+
+window.completeSetup=async function(){
+  const stn=document.getElementById('setupStnName').value.trim();
+  if(!stn){ setSetupStatus('Please enter a station name.','err'); return; }
+
+  // Get FB config - either new or saved
+  let cfg=null;
+  const savedCfg=localStorage.getItem(KEY_FB);
+  const apiKey=document.getElementById('setupApiKey').value.trim();
+
+  if(apiKey){
+    cfg={apiKey,authDomain:document.getElementById('setupAuthDomain').value.trim(),projectId:document.getElementById('setupProjectId').value.trim(),appId:document.getElementById('setupAppId').value.trim()};
+    localStorage.setItem(KEY_FB,JSON.stringify(cfg));
+  } else if(savedCfg){
+    cfg=JSON.parse(savedCfg);
+  } else {
+    setSetupStatus('Please enter Firebase config (tap "Show settings").','err'); return;
+  }
+
+  // Save Anthropic API key if provided
+  const anthKey=document.getElementById('setupAnthropicKey').value.trim();
+  if(anthKey) localStorage.setItem('anthropic_key', anthKey);
+
+  if(!getApiKey()){ setSetupStatus('Please enter your Anthropic API key.','err'); return; }
+
+  setSetupStatus('Connecting to Firebase…','');
+  try{
+    const app=initializeApp(cfg);
+    db=getFirestore(app);
+    currentStation=stn;
+    localStorage.setItem(KEY_STN,stn);
+    setSetupStatus('✅ Connected!','ok');
+    setTimeout(()=>{ document.getElementById('setupScreen').style.display='none'; launch(); },600);
+  }catch(e){ setSetupStatus('❌ '+e.message,'err'); }
+};
+
+function setSetupStatus(msg,cls){ const el=document.getElementById('setupStatus'); el.textContent=msg; el.className='setup-status'+(cls?' '+cls:''); }
+
+// ════════════════════════════════════════
+// AUTO RECONNECT
+// ════════════════════════════════════════
+async function tryAutoConnect(){
+  const stn=localStorage.getItem(KEY_STN);
+  const fbCfg=localStorage.getItem(KEY_FB);
+  if(!stn||!fbCfg) return;
+  try{
+    const cfg=JSON.parse(fbCfg);
+    const app=initializeApp(cfg);
+    db=getFirestore(app);
+    currentStation=stn;
+    document.getElementById('setupScreen').style.display='none';
+    launch();
+  }catch(e){ /* show setup */ }
+}
+
+// ════════════════════════════════════════
+// LAUNCH
+// ════════════════════════════════════════
+function launch(){
+  updateStationUI();
+  listenKb();
+  listenIncidents();
+}
+
+function setSyncStatus(on){
+  document.getElementById('syncDot').className='sync-dot'+(on?'':' off');
+  document.getElementById('syncLabel').textContent=on?'Live':'Offline';
+}
+
+// ════════════════════════════════════════
+// REALTIME LISTENERS
+// ════════════════════════════════════════
+function listenKb(){
+  onSnapshot(query(collection(db,'kb'),orderBy('createdAt','desc')),snap=>{
+    kb=snap.docs.map(d=>({id:d.id,...d.data()}));
+    setSyncStatus(true);
+    renderKbList();
+    updateKbCount();
+  },()=>setSyncStatus(false));
+}
+function listenIncidents(){
+  onSnapshot(query(collection(db,'incidents'),where('station','==',currentStation),orderBy('timestamp','desc')),snap=>{
+    incidents=snap.docs.map(d=>({id:d.id,...d.data()}));
+    renderIncList();
+    updateIncCount();
+  });
+}
+
+function getStationKb(){ return kb.filter(e=>e.scope==='global'||(e.scope==='local'&&e.station===currentStation)); }
+
+// ════════════════════════════════════════
+// KB
+// ════════════════════════════════════════
+const CAT_ICONS={'GAP POS':'🖥️','Fuel & Pumps':'⛽','Cash Handling':'💵','Store Operations':'🏪','EFTPOS':'💳','Compliance':'📋','Emergency':'🚨','Customer Service':'🤝','Other':'📌'};
+
+function renderKbList(){
+  let entries=getStationKb();
+  if(kbScopeF==='global') entries=entries.filter(e=>e.scope==='global');
+  if(kbScopeF==='local')  entries=entries.filter(e=>e.scope==='local');
+  if(kbCatF!=='All') entries=entries.filter(e=>e.category===kbCatF);
+  const list=document.getElementById('kbList');
+  if(!entries.length){ list.innerHTML='<div class="empty-state"><div class="icon">📭</div><p>No entries yet.<br>Your manager can add them via the Manager Dashboard.</p></div>'; return; }
+  list.innerHTML=entries.map(e=>`
+    <div class="kb-card ${e.scope==='global'?'gc':'lc'}" id="kbc-${e.id}">
+      <div class="kb-card-top" onclick="toggleKb('${e.id}')">
+        <div class="kb-icon">${CAT_ICONS[e.category]||'📌'}</div>
+        <div class="kb-body">
+          <div class="kb-q">${esc(e.question||'')}</div>
+          <div class="kb-meta">
+            <span class="kb-tag tc">${esc(e.category||'')}</span>
+            ${e.scope==='global'?'<span class="kb-tag tg">🌐 Global</span>':`<span class="kb-tag tl">📍 ${esc(e.station||currentStation)}</span>`}
+          </div>
+        </div>
+        <div class="kb-chevron">▼</div>
+      </div>
+      <div class="kb-answer">${esc(e.answer||'').replace(/\n/g,'<br>')}</div>
+    </div>`).join('');
+}
+window.toggleKb=function(id){ document.getElementById('kbc-'+id)?.classList.toggle('expanded'); };
+window.setSf=function(f,el){ kbScopeF=f; document.querySelectorAll('.scope-btn').forEach(x=>x.className='scope-btn'); el.className='scope-btn '+(f==='global'?'ag':f==='local'?'al':'ag'); renderKbList(); };
+window.setCat=function(c,el){ kbCatF=c; document.querySelectorAll('.cat-chip').forEach(x=>x.classList.remove('active')); el.classList.add('active'); renderKbList(); };
+function updateKbCount(){
+  const sKb=getStationKb();
+  document.getElementById('kbCount').textContent=`🌐 ${kb.filter(e=>e.scope==='global').length} global · 📍 ${kb.filter(e=>e.scope==='local'&&e.station===currentStation).length} station-specific`;
+}
+
+// ════════════════════════════════════════
+// INCIDENTS
+// ════════════════════════════════════════
+function renderIncList(){
+  let rows=[...incidents];
+  if(incF==='open')     rows=rows.filter(i=>!i.resolved);
+  if(incF==='resolved') rows=rows.filter(i=>i.resolved);
+  if(['high','med','low'].includes(incF)) rows=rows.filter(i=>i.severity===incF);
+  const list=document.getElementById('incList');
+  if(!rows.length){ list.innerHTML='<div class="empty-state"><div class="icon">📋</div><p>No incidents for this filter.<br>Tap <strong>+ Log Incident</strong> to record one.</p></div>'; return; }
+  list.innerHTML=rows.map(i=>`
+    <div class="inc-card${i.resolved?' resolved':''}" id="inc-${i.id}">
+      <div class="inc-top">
+        <span class="inc-badge badge-${i.severity||'low'}">${(i.severity||'low').toUpperCase()}</span>
+        <div class="inc-title">${esc(i.type||'')}</div>
+        <div class="inc-time">${fmtTime(i.timestamp)}</div>
+      </div>
+      ${i.description?`<div class="inc-desc">${esc(i.description)}</div>`:''}
+      <div class="inc-footer">
+        <span class="inc-staff">👤 ${esc(i.staff||'Unknown')}</span>
+        ${i.resolved?'<span class="resolved-badge">✅ Resolved</span>':`<button class="inc-resolve" onclick="resolveInc('${i.id}')">Mark Resolved</button>`}
+      </div>
+    </div>`).join('');
+}
+window.setIncF=function(f,el){ incF=f; document.querySelectorAll('.inc-filters .cat-chip').forEach(x=>x.classList.remove('active')); el.classList.add('active'); renderIncList(); };
+window.openIncModal=function(){ document.getElementById('iStaff').value=''; document.getElementById('iSev').value='med'; document.getElementById('iType').value='Drive-Off'; document.getElementById('iDesc').value=''; document.getElementById('incModal').classList.add('open'); };
+window.closeIncModal=function(){ document.getElementById('incModal').classList.remove('open'); };
+window.saveIncident=async function(){
+  const staff=document.getElementById('iStaff').value.trim(), sev=document.getElementById('iSev').value, type=document.getElementById('iType').value, desc=document.getElementById('iDesc').value.trim();
+  if(!desc){ showToast('Please describe the incident.'); return; }
+  try{
+    await addDoc(collection(db,'incidents'),{station:currentStation,staff,severity:sev,type,description:desc,timestamp:Date.now(),resolved:false});
+    closeIncModal(); showToast('📋 Incident logged — visible to manager');
+  }catch(e){ showToast('Error: '+e.message); }
+};
+window.resolveInc=async function(id){
+  try{ await updateDoc(doc(db,'incidents',id),{resolved:true,resolvedAt:Date.now()}); showToast('✅ Marked as resolved'); }
+  catch(e){ showToast('Error: '+e.message); }
+};
+function updateIncCount(){ document.getElementById('incCount').textContent=`${incidents.length} total · ${incidents.filter(i=>!i.resolved).length} open`; }
+
+// ════════════════════════════════════════
+// TABS + PIN
+// ════════════════════════════════════════
+const PROTECTED=['kb'];
+window.switchTab=function(tab){
+  if(PROTECTED.includes(tab)){ pinTarget=tab; document.getElementById('pinOverlay').classList.add('open'); pinBuffer=''; renderPinDots(); document.getElementById('pinError').textContent=''; return; }
+  activateTab(tab);
+};
+function activateTab(tab){
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('tab-'+tab).classList.add('active');
+  document.getElementById('view-'+tab).classList.add('active');
+}
+window.cancelPin=function(){ document.getElementById('pinOverlay').classList.remove('open'); pinBuffer=''; };
+function renderPinDots(){ for(let i=0;i<4;i++) document.getElementById('pd'+i).className='pin-dot'+(i<pinBuffer.length?' filled':''); }
+window.pinPress=function(d){ if(pinBuffer.length>=4) return; pinBuffer+=d; renderPinDots(); if(pinBuffer.length===4) setTimeout(checkPin,200); };
+window.pinDel=function(){ pinBuffer=pinBuffer.slice(0,-1); renderPinDots(); };
+function checkPin(){
+  if(pinBuffer===ADMIN_PIN){ document.getElementById('pinOverlay').classList.remove('open'); pinBuffer=''; activateTab(pinTarget); }
+  else{ document.getElementById('pinError').textContent='Incorrect PIN.'; pinBuffer=''; renderPinDots(); setTimeout(()=>document.getElementById('pinError').textContent='',2000); }
+}
+
+// ════════════════════════════════════════
+// CHAT
+// ════════════════════════════════════════
+function buildSystemPrompt(){
+  const stKb=getStationKb();
+
+  // Look for a manager contact entry in the KB
+  const mgrEntry=stKb.find(e=>/(manager|duty|contact|phone|number)/i.test(e.question+e.answer));
+  const mgrLine=mgrEntry?`\nThe manager contact info for this station from the knowledge base: ${mgrEntry.answer}`:'';
+
+  let sys=`You are an AI assistant for a service station convenience store in Australia, deployed at: ${currentStation}.
+
+Help front-line staff quickly resolve shift issues. Expert knowledge: GAP POS, fuel operations, EFTPOS, compliance, cash handling, customer service, emergency procedures.
+
+Rules:
+- SHORT and ACTION-ORIENTED answers.
+- Numbered steps for processes.
+- **Bold** for key buttons/menu paths.
+- Calm and supportive tone.
+- Australian terminology (EFTPOS, petrol).
+- You are at ${currentStation} — reference it when relevant.
+
+ESCALATION RULE — VERY IMPORTANT:
+If you are not confident in the answer, or the situation involves safety, legal compliance, a large amount of money, fuel safety, a medical emergency, or anything that could go seriously wrong — always end your response with:
+"📞 **Not sure? Call your manager now** — don't guess on this one."
+${mgrLine}
+If the knowledge base has a manager contact number for this station, always include it clearly so staff can call straight away.
+Never guess or make up an answer. It is always better to escalate to the manager than to give incorrect information to staff.`;
+
+  if(stKb.length){
+    sys+=`\n\n--- KNOWLEDGE BASE FOR ${currentStation.toUpperCase()} ---\n(Manager-approved answers — always prioritise these)\n\n`;
+    stKb.forEach(e=>{ const lbl=e.scope==='global'?'[ALL STATIONS]':`[${e.station||currentStation}]`; sys+=`${lbl} [${e.category}]\nQ: ${e.question}\nA: ${e.answer}\n\n`; });
+    sys+=`--- END ---`;
+  }
+  return sys;
+}
+
+const chatEl=document.getElementById('chat'), inputEl=document.getElementById('userInput'), sendBtn=document.getElementById('sendBtn');
+inputEl.addEventListener('input',()=>{ inputEl.style.height='auto'; inputEl.style.height=Math.min(inputEl.scrollHeight,100)+'px'; });
+inputEl.addEventListener('keydown',e=>{ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); sendMessage(); }});
+window.quickAsk=function(t){ inputEl.value=t; sendMessage(); };
+
+function addMsg(role,html){
+  const row=document.createElement('div'); row.className='msg-row '+(role==='user'?'user':'ai');
+  const av=document.createElement('div'); av.className='avatar '+(role==='user'?'usr':'ai'); av.textContent=role==='user'?'👤':'🤖';
+  const bub=document.createElement('div'); bub.className='bubble '+(role==='user'?'user':'ai'); bub.innerHTML=html;
+  row.appendChild(av); row.appendChild(bub); chatEl.appendChild(row); chatEl.scrollTop=chatEl.scrollHeight;
+}
+function showTyping(){ const row=document.createElement('div'); row.className='typing-row'; row.id='typing-row'; const av=document.createElement('div'); av.className='avatar ai'; av.textContent='🤖'; const tb=document.createElement('div'); tb.className='typing-bub'; tb.innerHTML='<span></span><span></span><span></span>'; row.appendChild(av); row.appendChild(tb); chatEl.appendChild(row); chatEl.scrollTop=chatEl.scrollHeight; }
+function removeTyping(){ document.getElementById('typing-row')?.remove(); }
+function fmtReply(text){
+  text=text.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/`([^`]+)`/g,'<code>$1</code>');
+  const lines=text.split('\n'); let html='',inList=false;
+  for(let line of lines){
+    const nm=line.match(/^(\d+)\.\s(.+)/),bm=line.match(/^[-•]\s(.+)/);
+    if(nm){ if(!inList){html+='<ol>';inList='ol';} else if(inList==='ul'){html+='</ul><ol>';inList='ol';} html+=`<li>${nm[2]}</li>`; }
+    else if(bm){ if(!inList){html+='<ul>';inList='ul';} else if(inList==='ol'){html+='</ol><ul>';inList='ul';} html+=`<li>${bm[1]}</li>`; }
+    else{ if(inList){html+=inList==='ol'?'</ol>':'</ul>';inList=false;} if(line.trim())html+=`<p>${line}</p>`; }
+  }
+  if(inList)html+=inList==='ol'?'</ol>':'</ul>'; return html;
+}
+window.sendMessage=async function(){
+  const text=inputEl.value.trim(); if(!text||sendBtn.disabled) return;
+  inputEl.value=''; inputEl.style.height='auto'; sendBtn.disabled=true;
+  addMsg('user',esc(text)); chatMessages.push({role:'user',content:text}); showTyping();
+  // Check API key first
+  if(!getApiKey()){
+    removeTyping();
+    addMsg('ai','⚠️ <strong>No API key set.</strong> Tap the ⚙️ button in the top right and paste your Anthropic API key.');
+    sendBtn.disabled=false; inputEl.focus(); return;
+  }
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'x-api-key':getApiKey(),
+        'anthropic-version':'2023-06-01',
+        'anthropic-dangerous-allow-browser':'true'
+      },
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,system:buildSystemPrompt(),messages:chatMessages})
+    });
+    if(!res.ok){
+      const err=await res.json().catch(()=>({}));
+      const msg=err?.error?.message||'Unknown error';
+      removeTyping();
+      if(res.status===401) addMsg('ai','⚠️ <strong>Invalid API key.</strong> Tap ⚙️ and re-enter your key from console.anthropic.com');
+      else if(res.status===429) addMsg('ai','⚠️ <strong>Rate limit or no credits.</strong> Check your billing at console.anthropic.com → Billing');
+      else addMsg('ai','⚠️ API error '+res.status+': '+msg);
+      sendBtn.disabled=false; inputEl.focus(); return;
+    }
+    const data=await res.json();
+    const reply=data.content?.map(b=>b.text||'').join('')||'Sorry, no response. Try again.';
+    removeTyping(); addMsg('ai',fmtReply(reply)); chatMessages.push({role:'assistant',content:reply});
+  }catch(err){
+    removeTyping();
+    const isOnline=navigator.onLine;
+    if(!isOnline) addMsg('ai','⚠️ <strong>No internet connection.</strong> Please check your network and try again.');
+    else addMsg('ai','⚠️ <strong>Could not reach Anthropic.</strong> This is usually a browser security block when opening the file directly.<br><br>💡 <strong>Fix:</strong> Open the file in <strong>Chrome</strong> and make sure the address bar shows <code>file://</code> or host it via a local server.');
+    console.error('Fetch error:',err);
+  }
+  sendBtn.disabled=false; inputEl.focus();
+};
+
+// ════════════════════════════════════════
+// UTILS
+// ════════════════════════════════════════
+function updateStationUI(){
+  const short=currentStation.length>16?currentStation.slice(0,15)+'…':currentStation;
+  document.getElementById('stationBadge').textContent='⛽ '+short;
+  document.getElementById('welcomeStation').textContent='📍 '+currentStation;
+}
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function fmtTime(ts){ if(!ts) return '—'; const d=new Date(typeof ts==='object'?ts.toDate?.()??ts:ts); return isNaN(d)?'—':d.toLocaleDateString('en-AU',{day:'2-digit',month:'short'})+' '+d.toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'}); }
+function showToast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2800); }
+
+// ════════════════════════════════════════
+// ANTHROPIC API KEY
+// ════════════════════════════════════════
+function getApiKey(){ return localStorage.getItem('anthropic_key')||''; }
+
+window.openApiModal = function(){
+  const modal = document.getElementById('apiModal');
+  const current = getApiKey();
+  const currentEl = document.getElementById('apiKeyCurrent');
+  if(current){
+    currentEl.textContent = '✅ Key saved: sk-ant-…' + current.slice(-6);
+  } else {
+    currentEl.textContent = '⚠️ No API key saved yet — chat will not work without it.';
+    currentEl.style.color = 'var(--yellow)';
+  }
+  document.getElementById('apiKeyInput').value = '';
+  modal.classList.add('open');
+};
+
+window.saveApiKey = function(){
+  const key = document.getElementById('apiKeyInput').value.trim();
+  if(!key){ showToast('Please paste your API key first.'); return; }
+  if(!key.startsWith('sk-ant-')){ showToast('That doesn\'t look right — key should start with sk-ant-'); return; }
+  localStorage.setItem('anthropic_key', key);
+  document.getElementById('apiModal').classList.remove('open');
+  showToast('✅ API key saved! You can now use the chat.');
+};
+
+tryAutoConnect();
+</script>
+</body>
+</html>

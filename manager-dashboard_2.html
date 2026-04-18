@@ -1,0 +1,1082 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Manager Dashboard — Station Network</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --fuel:#FF6B00;--fuel-l:#FF8C00;--fuel-d:#CC5500;
+  --dark:#07070D;--panel:#0F0F18;--card:#171724;--card2:#1E1E2E;--card3:#252535;
+  --border:#252535;--border2:#2E2E42;
+  --text:#EEEEF8;--muted:#5E5E7A;--muted2:#8888A8;
+  --green:#00D68F;--red:#FF4D6A;--blue:#4D9FFF;--yellow:#FFD166;--purple:#B06EFF;
+  --sidebar:220px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--dark);color:var(--text);font-family:'DM Sans',sans-serif;height:100dvh;display:flex;overflow:hidden;}
+
+/* ══ FIREBASE CONFIG OVERLAY ══ */
+#fbSetup{position:fixed;inset:0;background:var(--dark);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px;}
+.fb-box{background:var(--panel);border:1px solid var(--border2);border-radius:20px;width:100%;max-width:520px;overflow:hidden;}
+.fb-head{background:linear-gradient(135deg,#FF6B00,#FF8C00);padding:24px 28px;}
+.fb-head h1{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:#fff;}
+.fb-head p{font-size:13px;color:rgba(255,255,255,.8);margin-top:4px;}
+.fb-body{padding:24px 28px;display:flex;flex-direction:column;gap:14px;}
+.fb-step{background:var(--card);border:1px solid var(--border2);border-radius:12px;padding:14px 16px;}
+.fb-step-num{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:var(--fuel);color:#fff;font-size:11px;font-weight:800;font-family:'Syne',sans-serif;margin-right:8px;flex-shrink:0;}
+.fb-step-title{font-size:13px;font-weight:600;display:flex;align-items:center;}
+.fb-step p{font-size:12px;color:var(--muted2);margin-top:6px;line-height:1.6;}
+.fb-step a{color:var(--fuel);text-decoration:none;}
+.fb-step a:hover{text-decoration:underline;}
+.fb-fields{display:flex;flex-direction:column;gap:10px;}
+.fb-field label{display:block;font-size:10.5px;color:var(--muted2);font-weight:500;letter-spacing:.05em;text-transform:uppercase;margin-bottom:5px;}
+.fb-field input{width:100%;background:var(--card2);border:1px solid var(--border2);border-radius:9px;padding:10px 13px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;outline:none;transition:border-color .2s;}
+.fb-field input:focus{border-color:var(--fuel);}
+.fb-field input::placeholder{color:var(--muted);}
+.btn-connect{width:100%;padding:13px;border-radius:12px;border:none;background:var(--fuel);color:#fff;font-family:'Syne',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:all .2s;margin-top:4px;}
+.btn-connect:hover{background:var(--fuel-l);}
+.fb-status{font-size:12px;text-align:center;min-height:18px;margin-top:-4px;}
+.fb-status.err{color:var(--red);}
+.fb-status.ok{color:var(--green);}
+
+/* ══ SIDEBAR ══ */
+.sidebar{width:var(--sidebar);background:var(--panel);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow:hidden;}
+.sidebar-brand{padding:20px 16px 14px;border-bottom:1px solid var(--border);}
+.brand-logo{display:flex;align-items:center;gap:10px;margin-bottom:2px;}
+.brand-icon{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--fuel),var(--fuel-l));display:grid;place-items:center;font-size:16px;flex-shrink:0;}
+.brand-text h1{font-family:'Syne',sans-serif;font-size:13px;font-weight:800;line-height:1.2;}
+.brand-text p{font-size:10.5px;color:var(--muted2);margin-top:1px;}
+.sync-status{display:flex;align-items:center;gap:5px;font-size:10.5px;margin-top:8px;}
+.sync-dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 5px var(--green);animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
+.sync-dot.offline{background:var(--red);box-shadow:0 0 5px var(--red);animation:none;}
+
+.nav-section{padding:10px 10px 4px;font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;margin:1px 8px;cursor:pointer;transition:all .18s;font-size:13px;color:var(--muted2);}
+.nav-item:hover{background:var(--card);color:var(--text);}
+.nav-item.active{background:rgba(255,107,0,.12);color:var(--fuel);font-weight:500;}
+.nav-item .ni-icon{font-size:15px;width:20px;text-align:center;flex-shrink:0;}
+.nav-item .ni-badge{margin-left:auto;background:var(--red);color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;font-family:'Syne',sans-serif;}
+
+.sidebar-footer{margin-top:auto;padding:12px 10px;border-top:1px solid var(--border);}
+.btn-reconfigure{width:100%;padding:8px;border-radius:9px;border:1px solid var(--border2);background:transparent;color:var(--muted2);font-family:'DM Sans',sans-serif;font-size:12px;cursor:pointer;transition:all .2s;}
+.btn-reconfigure:hover{border-color:var(--fuel);color:var(--fuel);}
+
+/* ══ MAIN ══ */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+
+/* ══ TOPBAR ══ */
+.topbar{background:var(--panel);border-bottom:1px solid var(--border);padding:0 24px;height:56px;display:flex;align-items:center;gap:14px;flex-shrink:0;}
+.topbar h2{font-family:'Syne',sans-serif;font-size:16px;font-weight:800;}
+.topbar-meta{font-size:12px;color:var(--muted2);margin-left:4px;}
+.topbar-actions{margin-left:auto;display:flex;gap:8px;align-items:center;}
+.btn-p{background:var(--fuel);color:#fff;border:none;border-radius:9px;padding:8px 16px;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:6px;white-space:nowrap;}
+.btn-p:hover{background:var(--fuel-l);}
+.btn-s{background:transparent;color:var(--muted2);border:1px solid var(--border2);border-radius:9px;padding:8px 14px;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:6px;white-space:nowrap;}
+.btn-s:hover{color:var(--text);border-color:var(--text);}
+
+/* ══ CONTENT ══ */
+.content{flex:1;overflow-y:auto;padding:22px 24px;scrollbar-width:thin;scrollbar-color:var(--border) transparent;}
+.content::-webkit-scrollbar{width:5px;}
+.content::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px;}
+
+/* ══ VIEWS ══ */
+.view{display:none;}
+.view.active{display:block;}
+
+/* ══ OVERVIEW ══ */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px;}
+.stat-card{background:var(--card);border:1px solid var(--border2);border-radius:14px;padding:18px 16px;position:relative;overflow:hidden;}
+.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;}
+.stat-card.c-fuel::before{background:var(--fuel);}
+.stat-card.c-blue::before{background:var(--blue);}
+.stat-card.c-green::before{background:var(--green);}
+.stat-card.c-red::before{background:var(--red);}
+.stat-icon{font-size:22px;margin-bottom:10px;}
+.stat-num{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;line-height:1;}
+.stat-label{font-size:12px;color:var(--muted2);margin-top:4px;}
+.stat-sub{font-size:11px;color:var(--muted);margin-top:2px;}
+
+.section-title{font-family:'Syne',sans-serif;font-size:13px;font-weight:800;color:var(--muted2);letter-spacing:.05em;text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;}
+.section-title a{font-size:11px;color:var(--fuel);cursor:pointer;text-transform:none;letter-spacing:0;font-family:'DM Sans',sans-serif;font-weight:400;}
+
+.stations-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;margin-bottom:22px;}
+.station-card{background:var(--card);border:1px solid var(--border2);border-radius:12px;padding:14px 13px;transition:all .2s;cursor:pointer;}
+.station-card:hover{border-color:rgba(255,107,0,.35);transform:translateY(-1px);}
+.station-card-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+.station-icon{width:32px;height:32px;border-radius:9px;background:rgba(255,107,0,.1);display:grid;place-items:center;font-size:14px;}
+.station-online{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 5px var(--green);}
+.station-name{font-size:13px;font-weight:600;margin-bottom:3px;}
+.station-stats{display:flex;gap:8px;}
+.sstat{font-size:11px;color:var(--muted2);}
+.sstat span{color:var(--text);font-weight:600;}
+
+.recent-incidents{display:flex;flex-direction:column;gap:8px;}
+.ri-row{background:var(--card);border:1px solid var(--border2);border-radius:11px;padding:12px 14px;display:flex;align-items:center;gap:12px;}
+.ri-badge{border-radius:6px;padding:3px 8px;font-size:10.5px;font-weight:700;flex-shrink:0;}
+.badge-high{background:rgba(255,77,106,.15);color:var(--red);}
+.badge-med{background:rgba(255,209,102,.12);color:var(--yellow);}
+.badge-low{background:rgba(0,214,143,.1);color:var(--green);}
+.ri-info{flex:1;min-width:0;}
+.ri-title{font-size:13px;font-weight:500;}
+.ri-meta{font-size:11px;color:var(--muted2);margin-top:2px;}
+.ri-time{font-size:11px;color:var(--muted);flex-shrink:0;}
+.ri-resolve{padding:4px 10px;border-radius:6px;border:1px solid var(--border2);background:transparent;font-size:11px;color:var(--muted2);cursor:pointer;transition:all .2s;white-space:nowrap;}
+.ri-resolve:hover{border-color:var(--green);color:var(--green);}
+
+/* ══ KB VIEW ══ */
+.kb-toolbar{display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap;}
+.kb-search{flex:1;min-width:180px;background:var(--card);border:1px solid var(--border2);border-radius:10px;padding:9px 14px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;outline:none;transition:border-color .2s;}
+.kb-search:focus{border-color:var(--fuel);}
+.kb-search::placeholder{color:var(--muted);}
+.filter-select{background:var(--card);border:1px solid var(--border2);border-radius:10px;padding:9px 12px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;outline:none;cursor:pointer;}
+.filter-select option{background:var(--panel);}
+
+.kb-table{width:100%;border-collapse:collapse;}
+.kb-table th{background:var(--card2);padding:10px 14px;text-align:left;font-size:11px;font-weight:700;color:var(--muted2);letter-spacing:.05em;text-transform:uppercase;border-bottom:1px solid var(--border2);}
+.kb-table th:first-child{border-radius:10px 0 0 0;}
+.kb-table th:last-child{border-radius:0 10px 0 0;}
+.kb-table td{padding:11px 14px;font-size:13px;border-bottom:1px solid var(--border);vertical-align:top;}
+.kb-table tr:last-child td{border-bottom:none;}
+.kb-table tr:hover td{background:var(--card2);}
+.scope-pill{display:inline-flex;align-items:center;gap:4px;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:600;}
+.sp-global{background:rgba(77,159,255,.1);color:var(--blue);}
+.sp-local{background:rgba(255,107,0,.1);color:var(--fuel);}
+.cat-pill{background:var(--card2);border-radius:5px;padding:2px 8px;font-size:11px;color:var(--muted2);}
+.td-actions{display:flex;gap:5px;}
+.btn-xs{width:26px;height:26px;border-radius:6px;border:1px solid var(--border2);background:transparent;cursor:pointer;display:grid;place-items:center;font-size:12px;transition:all .18s;}
+.btn-xs.edit:hover{border-color:var(--blue);background:rgba(77,159,255,.1);}
+.btn-xs.del:hover{border-color:var(--red);background:rgba(255,77,106,.1);}
+.empty-row td{text-align:center;padding:40px;color:var(--muted2);}
+
+/* ══ INCIDENTS VIEW ══ */
+.inc-toolbar{display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap;}
+.inc-table{width:100%;border-collapse:collapse;}
+.inc-table th{background:var(--card2);padding:10px 14px;text-align:left;font-size:11px;font-weight:700;color:var(--muted2);letter-spacing:.05em;text-transform:uppercase;border-bottom:1px solid var(--border2);}
+.inc-table td{padding:11px 14px;font-size:12.5px;border-bottom:1px solid var(--border);vertical-align:top;}
+.inc-table tr:last-child td{border-bottom:none;}
+.inc-table tr:hover td{background:var(--card2);}
+.stn-pill{background:rgba(176,110,255,.1);color:var(--purple);border-radius:5px;padding:2px 7px;font-size:11px;font-weight:600;}
+.status-open{background:rgba(255,77,106,.1);color:var(--red);border-radius:5px;padding:2px 7px;font-size:11px;font-weight:600;}
+.status-resolved{background:rgba(0,214,143,.1);color:var(--green);border-radius:5px;padding:2px 7px;font-size:11px;font-weight:600;}
+
+/* ══ STATIONS VIEW ══ */
+.stations-list{display:flex;flex-direction:column;gap:10px;}
+.stn-row-full{background:var(--card);border:1px solid var(--border2);border-radius:13px;padding:14px 16px;display:flex;align-items:center;gap:14px;}
+.stn-num{width:32px;height:32px;border-radius:9px;background:rgba(255,107,0,.1);display:grid;place-items:center;font-family:'Syne',sans-serif;font-size:13px;font-weight:800;color:var(--fuel);flex-shrink:0;}
+.stn-info{flex:1;}
+.stn-info h3{font-size:14px;font-weight:600;}
+.stn-info p{font-size:11.5px;color:var(--muted2);margin-top:2px;}
+.stn-stats-row{display:flex;gap:16px;}
+.stn-stat{font-size:12px;color:var(--muted2);}
+.stn-stat strong{color:var(--text);font-weight:600;}
+.stn-actions{display:flex;gap:7px;}
+.btn-sm{padding:7px 13px;border-radius:8px;border:1px solid var(--border2);background:transparent;color:var(--muted2);font-family:'Syne',sans-serif;font-size:11.5px;font-weight:700;cursor:pointer;transition:all .2s;white-space:nowrap;}
+.btn-sm:hover{color:var(--text);border-color:var(--text);}
+.btn-sm.danger:hover{color:var(--red);border-color:var(--red);}
+
+/* ══ UPLOAD VIEW ══ */
+.upload-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.upload-card{background:var(--card);border:1px solid var(--border2);border-radius:14px;padding:20px;}
+.upload-card h3{font-family:'Syne',sans-serif;font-size:14px;font-weight:800;margin-bottom:4px;}
+.upload-card p{font-size:12.5px;color:var(--muted2);margin-bottom:16px;line-height:1.55;}
+.dropzone{border:2px dashed var(--border2);border-radius:12px;padding:28px 20px;text-align:center;cursor:pointer;transition:all .2s;background:var(--card2);}
+.dropzone:hover,.dropzone.drag{border-color:var(--fuel);background:rgba(255,107,0,.05);}
+.dropzone-icon{font-size:28px;margin-bottom:8px;}
+.dropzone p{font-size:13px;color:var(--muted2);}
+.dropzone small{font-size:11px;color:var(--muted);display:block;margin-top:4px;}
+.dropzone input{display:none;}
+.upload-preview{background:var(--card2);border:1px solid var(--border2);border-radius:10px;padding:12px 14px;margin-top:12px;font-size:12.5px;display:none;}
+.upload-preview.show{display:block;}
+.up-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;}
+.up-filename{color:var(--text);font-weight:500;}
+.up-count{color:var(--green);font-size:12px;}
+.up-targets{margin-top:10px;}
+.up-targets label{display:block;font-size:10.5px;color:var(--muted2);font-weight:500;letter-spacing:.05em;text-transform:uppercase;margin-bottom:6px;}
+.target-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;}
+.target-chip{border-radius:20px;padding:4px 11px;font-size:11.5px;cursor:pointer;border:1px solid var(--border2);background:var(--card3);color:var(--muted2);transition:all .18s;}
+.target-chip.selected{border-color:var(--fuel);color:var(--fuel);background:rgba(255,107,0,.08);}
+.target-chip.all-chip.selected{border-color:var(--blue);color:var(--blue);background:rgba(77,159,255,.08);}
+.btn-upload-send{width:100%;padding:11px;border-radius:10px;border:none;background:var(--fuel);color:#fff;font-family:'Syne',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:all .2s;margin-top:4px;}
+.btn-upload-send:hover{background:var(--fuel-l);}
+.btn-upload-send:disabled{opacity:.4;cursor:not-allowed;}
+
+.format-guide{background:var(--card2);border:1px solid var(--border2);border-radius:10px;padding:13px 14px;margin-top:12px;}
+.format-guide h4{font-size:12px;font-weight:700;margin-bottom:8px;color:var(--muted2);}
+.format-guide code{display:block;font-size:11.5px;color:var(--green);background:var(--card);padding:10px 12px;border-radius:8px;line-height:1.7;white-space:pre-wrap;font-family:monospace;}
+
+/* ══ MODAL ══ */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);backdrop-filter:blur(5px);z-index:500;align-items:center;justify-content:center;padding:16px;}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--panel);border:1px solid var(--border2);border-radius:18px;width:100%;max-width:500px;max-height:88dvh;display:flex;flex-direction:column;overflow:hidden;animation:mIn .22s ease;}
+@keyframes mIn{from{opacity:0;transform:scale(.95);}to{opacity:1;transform:scale(1);}}
+.modal-head{padding:16px 20px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.modal-head h3{font-family:'Syne',sans-serif;font-size:15px;font-weight:800;}
+.btn-close{width:28px;height:28px;border-radius:7px;border:1px solid var(--border2);background:transparent;cursor:pointer;display:grid;place-items:center;font-size:15px;color:var(--muted2);transition:all .2s;}
+.btn-close:hover{border-color:var(--red);color:var(--red);}
+.modal-body{padding:16px 20px;overflow-y:auto;display:flex;flex-direction:column;gap:13px;}
+.field label{display:block;font-size:10.5px;font-weight:500;color:var(--muted2);margin-bottom:5px;letter-spacing:.05em;text-transform:uppercase;}
+.field input,.field textarea,.field select{width:100%;background:var(--card);border:1px solid var(--border2);border-radius:10px;padding:10px 13px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;outline:none;transition:border-color .2s;}
+.field input:focus,.field textarea:focus,.field select:focus{border-color:var(--fuel);}
+.field textarea{resize:vertical;min-height:90px;line-height:1.6;}
+.field select option{background:var(--panel);}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.scope-toggle{display:flex;gap:8px;}
+.scope-opt{flex:1;padding:10px;border-radius:10px;border:1px solid var(--border2);background:var(--card);cursor:pointer;transition:all .2s;text-align:center;}
+.scope-opt.ag{border-color:var(--blue);background:rgba(77,159,255,.07);}
+.scope-opt.al{border-color:var(--fuel);background:rgba(255,107,0,.07);}
+.scope-opt strong{display:block;font-size:12px;font-family:'Syne',sans-serif;font-weight:700;}
+.scope-opt span{font-size:10.5px;color:var(--muted2);}
+.modal-foot{padding:12px 20px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;}
+.btn-cancel{padding:9px 16px;border-radius:9px;border:1px solid var(--border2);background:transparent;color:var(--muted2);font-family:'Syne',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;}
+.btn-cancel:hover{border-color:var(--text);color:var(--text);}
+.btn-save{padding:9px 20px;border-radius:9px;border:none;background:var(--fuel);color:#fff;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;cursor:pointer;}
+.btn-save:hover{background:var(--fuel-l);}
+
+/* toast */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--green);color:#000;font-family:'Syne',sans-serif;font-size:13px;font-weight:700;padding:11px 20px;border-radius:12px;z-index:999;opacity:0;transition:opacity .3s;pointer-events:none;max-width:320px;}
+.toast.show{opacity:1;}
+.toast.err{background:var(--red);color:#fff;}
+
+@media(max-width:700px){
+  .stats-row{grid-template-columns:1fr 1fr;}
+  .upload-grid{grid-template-columns:1fr;}
+  .sidebar{display:none;}
+}
+</style>
+</head>
+<body>
+
+<!-- ══ FIREBASE SETUP ══ -->
+<div id="fbSetup">
+  <div class="fb-box">
+    <div class="fb-head">
+      <h1>⛽ Manager Dashboard Setup</h1>
+      <p>Connect your Firebase project to sync data across all 15 stations in real-time.</p>
+    </div>
+    <div class="fb-body">
+      <div class="fb-step">
+        <div class="fb-step-title"><span class="fb-step-num">1</span>Create a free Firebase project</div>
+        <p>Go to <a href="https://console.firebase.google.com" target="_blank">console.firebase.google.com</a> → Create project → Enable <strong>Firestore Database</strong> (start in test mode) → Go to Project Settings → Add a Web App → copy the config values below.</p>
+      </div>
+      <div class="fb-step">
+        <div class="fb-step-title"><span class="fb-step-num">2</span>Set Firestore rules (in Firebase Console → Firestore → Rules)</div>
+        <p>Paste this rule so your apps can read/write:<br>
+        <code style="font-size:11px;background:#111;padding:4px 8px;border-radius:4px;display:inline-block;margin-top:4px;color:#4D9FFF;">rules_version='2'; service cloud.firestore { match /databases/{db}/documents { match /{doc=**} { allow read, write: if true; } } }</code></p>
+      </div>
+      <div class="fb-step">
+        <div class="fb-step-title"><span class="fb-step-num">3</span>Paste your Firebase config</div>
+        <div class="fb-fields">
+          <div class="fb-field"><label>API Key</label><input id="fbApiKey" placeholder="AIza…"/></div>
+          <div class="fb-field"><label>Auth Domain</label><input id="fbAuthDomain" placeholder="your-project.firebaseapp.com"/></div>
+          <div class="fb-field"><label>Project ID</label><input id="fbProjectId" placeholder="your-project-id"/></div>
+          <div class="fb-field"><label>App ID</label><input id="fbAppId" placeholder="1:123456789:web:abc…"/></div>
+        </div>
+      </div>
+      <div class="fb-status" id="fbStatus"></div>
+      <button class="btn-connect" onclick="connectFirebase()">Connect & Launch Dashboard →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ KB MODAL ══ -->
+<div class="modal-overlay" id="kbModal">
+  <div class="modal">
+    <div class="modal-head"><h3 id="kbModalTitle">Add Knowledge Entry</h3><button class="btn-close" onclick="closeKbModal()">✕</button></div>
+    <div class="modal-body">
+      <div class="field">
+        <label>Applies To</label>
+        <div class="scope-toggle">
+          <div class="scope-opt ag" id="soGlobal" onclick="setScopeOpt('global')"><strong>🌐 All Stations</strong><span>Shared globally</span></div>
+          <div class="scope-opt" id="soLocal" onclick="setScopeOpt('local')"><strong>📍 One Station</strong><span>Station-specific</span></div>
+        </div>
+      </div>
+      <div class="field" id="stationFieldWrap">
+        <label>Target Station</label>
+        <select id="fStation"></select>
+      </div>
+      <div class="field"><label>Category</label>
+        <select id="fCat">
+          <option>GAP POS</option><option>Fuel & Pumps</option><option>Cash Handling</option>
+          <option>Store Operations</option><option>EFTPOS</option><option>Compliance</option>
+          <option>Emergency</option><option>Customer Service</option><option>Other</option>
+        </select>
+      </div>
+      <div class="field"><label>Question / Issue</label><input type="text" id="fQ" placeholder="e.g. What is the manager's direct number?"/></div>
+      <div class="field"><label>Answer / Solution</label><textarea id="fA" placeholder="Step-by-step answer or specific information…"></textarea></div>
+    </div>
+    <div class="modal-foot"><button class="btn-cancel" onclick="closeKbModal()">Cancel</button><button class="btn-save" onclick="saveKbEntry()">Save & Sync</button></div>
+  </div>
+</div>
+
+<!-- ══ ADD STATION MODAL ══ -->
+<div class="modal-overlay" id="stnModal">
+  <div class="modal" style="max-width:380px;">
+    <div class="modal-head"><h3>Add New Station</h3><button class="btn-close" onclick="document.getElementById('stnModal').classList.remove('open')">✕</button></div>
+    <div class="modal-body">
+      <div class="field"><label>Station Name</label><input type="text" id="newStnName" placeholder="e.g. Bleach Service Station"/></div>
+    </div>
+    <div class="modal-foot"><button class="btn-cancel" onclick="document.getElementById('stnModal').classList.remove('open')">Cancel</button><button class="btn-save" onclick="addStation()">Add Station</button></div>
+  </div>
+</div>
+
+<!-- ══ RENAME STATION MODAL ══ -->
+<div class="modal-overlay" id="renameStnModal">
+  <div class="modal" style="max-width:400px;">
+    <div class="modal-head"><h3>✏️ Rename Station</h3><button class="btn-close" onclick="document.getElementById('renameStnModal').classList.remove('open')">✕</button></div>
+    <div class="modal-body">
+      <div class="field">
+        <label>Current Name</label>
+        <input type="text" id="renameStnOld" disabled style="opacity:.5;cursor:not-allowed;"/>
+      </div>
+      <div class="field">
+        <label>New Name</label>
+        <input type="text" id="renameStnNew" placeholder="e.g. Bleach Rd Service Centre"/>
+      </div>
+      <div style="background:rgba(255,209,102,.08);border:1px solid rgba(255,209,102,.2);border-radius:10px;padding:11px 13px;font-size:12px;color:var(--yellow);line-height:1.6;">
+        ⚠️ Renaming will update the station name everywhere in the dashboard. Staff devices will need to re-enter the new name on their next setup.
+      </div>
+    </div>
+    <div class="modal-foot"><button class="btn-cancel" onclick="document.getElementById('renameStnModal').classList.remove('open')">Cancel</button><button class="btn-save" onclick="confirmRenameStation()">Save New Name</button></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- ══ SIDEBAR ══ -->
+<div class="sidebar">
+  <div class="sidebar-brand">
+    <div class="brand-logo">
+      <div class="brand-icon">⛽</div>
+      <div class="brand-text"><h1>Station Network</h1><p>Manager Dashboard</p></div>
+    </div>
+    <div class="sync-status"><div class="sync-dot" id="syncDot"></div><span id="syncLabel">Connecting…</span></div>
+  </div>
+
+  <div class="nav-section">Overview</div>
+  <div class="nav-item active" id="nav-overview" onclick="showView('overview')"><span class="ni-icon">📊</span>Dashboard</div>
+
+  <div class="nav-section">Knowledge</div>
+  <div class="nav-item" id="nav-kb" onclick="showView('kb')"><span class="ni-icon">🗂️</span>Knowledge Base</div>
+  <div class="nav-item" id="nav-upload" onclick="showView('upload')"><span class="ni-icon">📤</span>Upload / Import</div>
+
+  <div class="nav-section">Operations</div>
+  <div class="nav-item" id="nav-incidents" onclick="showView('incidents')"><span class="ni-icon">📋</span>Incident Log<span class="ni-badge" id="openBadge" style="display:none">0</span></div>
+  <div class="nav-item" id="nav-stations" onclick="showView('stations')"><span class="ni-icon">🏪</span>Stations</div>
+
+  <div class="sidebar-footer">
+    <button class="btn-reconfigure" onclick="reconfigure()">⚙️ Reconfigure Firebase</button>
+  </div>
+</div>
+
+<!-- ══ MAIN ══ -->
+<div class="main">
+  <div class="topbar">
+    <h2 id="topbarTitle">Dashboard</h2>
+    <span class="topbar-meta" id="topbarMeta"></span>
+    <div class="topbar-actions" id="topbarActions"></div>
+  </div>
+
+  <div class="content">
+
+    <!-- OVERVIEW -->
+    <div class="view active" id="view-overview">
+      <div class="stats-row">
+        <div class="stat-card c-fuel"><div class="stat-icon">🏪</div><div class="stat-num" id="ovStations">—</div><div class="stat-label">Stations</div></div>
+        <div class="stat-card c-blue"><div class="stat-icon">🗂️</div><div class="stat-num" id="ovKb">—</div><div class="stat-label">KB Entries</div><div class="stat-sub" id="ovKbSub"></div></div>
+        <div class="stat-card c-red"><div class="stat-icon">🔴</div><div class="stat-num" id="ovOpen">—</div><div class="stat-label">Open Incidents</div></div>
+        <div class="stat-card c-green"><div class="stat-icon">✅</div><div class="stat-num" id="ovResolved">—</div><div class="stat-label">Resolved (30d)</div></div>
+      </div>
+      <div class="section-title">All Stations <a onclick="showView('stations')">Manage →</a></div>
+      <div class="stations-grid" id="overviewStationsGrid"></div>
+      <div class="section-title">Recent Incidents <a onclick="showView('incidents')">View all →</a></div>
+      <div class="recent-incidents" id="recentIncidents"></div>
+    </div>
+
+    <!-- KB -->
+    <div class="view" id="view-kb">
+      <div class="kb-toolbar">
+        <input class="kb-search" id="kbSearch" placeholder="🔍 Search questions…" oninput="renderKbTable()"/>
+        <select class="filter-select" id="kbScopeFilter" onchange="renderKbTable()">
+          <option value="all">All Entries</option>
+          <option value="global">🌐 Global Only</option>
+          <option value="local">📍 Station-Specific</option>
+        </select>
+        <select class="filter-select" id="kbStationFilter" onchange="renderKbTable()">
+          <option value="all">All Stations</option>
+        </select>
+        <select class="filter-select" id="kbCatFilter" onchange="renderKbTable()">
+          <option value="all">All Categories</option>
+          <option>GAP POS</option><option>Fuel & Pumps</option><option>Cash Handling</option>
+          <option>Store Operations</option><option>EFTPOS</option><option>Compliance</option>
+          <option>Emergency</option><option>Customer Service</option><option>Other</option>
+        </select>
+      </div>
+      <table class="kb-table" id="kbTable">
+        <thead><tr><th>Scope</th><th>Category</th><th>Question</th><th>Answer</th><th style="width:80px">Actions</th></tr></thead>
+        <tbody id="kbTbody"></tbody>
+      </table>
+    </div>
+
+    <!-- UPLOAD -->
+    <div class="view" id="view-upload">
+      <div class="upload-grid">
+        <!-- JSON Upload -->
+        <div class="upload-card">
+          <h3>📁 Upload KB from File</h3>
+          <p>Upload a JSON or CSV file of Q&A entries and push them directly to selected stations.</p>
+          <div class="dropzone" id="dropzone" onclick="document.getElementById('fileInput').click()" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="handleDrop(event)">
+            <div class="dropzone-icon">📂</div>
+            <p>Click to browse or drag & drop</p>
+            <small>Supports .json and .csv files</small>
+            <input type="file" id="fileInput" accept=".json,.csv" onchange="handleFileSelect(this)"/>
+          </div>
+          <div class="upload-preview" id="uploadPreview">
+            <div class="up-row"><span class="up-filename" id="upFilename">file.json</span><span class="up-count" id="upCount">0 entries</span></div>
+            <div class="up-targets">
+              <label>Push to Stations</label>
+              <div class="target-chips" id="targetChips"></div>
+              <button class="btn-upload-send" id="sendUploadBtn" onclick="sendUpload()">🚀 Push to Selected Stations</button>
+            </div>
+          </div>
+          <div class="format-guide">
+            <h4>JSON Format</h4>
+            <code>[
+  {
+    "category": "GAP POS",
+    "question": "How do I process a refund?",
+    "answer": "1. Press REFUND key\n2. Scan item..."
+  }
+]</code>
+          </div>
+        </div>
+
+        <!-- Manual Entry -->
+        <div class="upload-card">
+          <h3>✏️ Paste / Type Entries</h3>
+          <p>Quickly add a single entry or paste multiple entries as JSON directly.</p>
+          <div class="field" style="margin-bottom:10px;">
+            <label>Target</label>
+            <select id="pasteTarget" class="filter-select" style="width:100%">
+              <option value="global">🌐 All Stations (Global)</option>
+            </select>
+          </div>
+          <div class="field" style="margin-bottom:10px;">
+            <label>Category</label>
+            <select id="pasteCat" class="filter-select" style="width:100%">
+              <option>GAP POS</option><option>Fuel & Pumps</option><option>Cash Handling</option>
+              <option>Store Operations</option><option>EFTPOS</option><option>Compliance</option>
+              <option>Emergency</option><option>Customer Service</option><option>Other</option>
+            </select>
+          </div>
+          <div class="field" style="margin-bottom:10px;">
+            <label>Question</label>
+            <input type="text" id="pasteQ" placeholder="What is the manager on duty number?"/>
+          </div>
+          <div class="field" style="margin-bottom:10px;">
+            <label>Answer</label>
+            <textarea id="pasteA" style="min-height:80px" placeholder="Call 0412 345 678 for the duty manager…"></textarea>
+          </div>
+          <button class="btn-upload-send" onclick="submitManualEntry()">✅ Add Entry & Sync</button>
+
+          <div class="format-guide" style="margin-top:14px;">
+            <h4>CSV Format (for file upload)</h4>
+            <code>category,question,answer
+GAP POS,"How to void?","1. Press VOID..."
+Fuel & Pumps,"Pump not working?","Check console..."</code>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- INCIDENTS -->
+    <div class="view" id="view-incidents">
+      <div class="inc-toolbar">
+        <input class="kb-search" id="incSearch" placeholder="🔍 Search incidents…" oninput="renderIncTable()"/>
+        <select class="filter-select" id="incStationFilter" onchange="renderIncTable()">
+          <option value="all">All Stations</option>
+        </select>
+        <select class="filter-select" id="incSevFilter" onchange="renderIncTable()">
+          <option value="all">All Severity</option>
+          <option value="high">🔴 High</option><option value="med">🟡 Medium</option><option value="low">🟢 Low</option>
+        </select>
+        <select class="filter-select" id="incStatusFilter" onchange="renderIncTable()">
+          <option value="all">All Status</option>
+          <option value="open">Open</option><option value="resolved">Resolved</option>
+        </select>
+        <button class="btn-p" onclick="exportIncCSV()">📊 Export CSV</button>
+        <button class="btn-s" onclick="exportIncPrint()">🖨️ Print</button>
+      </div>
+      <table class="inc-table" id="incTable">
+        <thead><tr><th>Station</th><th>Date</th><th>Type</th><th>Severity</th><th>Staff</th><th>Description</th><th>Status</th><th>Action</th></tr></thead>
+        <tbody id="incTbody"></tbody>
+      </table>
+    </div>
+
+    <!-- STATIONS -->
+    <div class="view" id="view-stations">
+      <div class="stations-list" id="stationsListFull"></div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+
+<!-- Firebase SDKs -->
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getFirestore, collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, query, orderBy, setDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+// ════════════════════════════════════════
+// STATE
+// ════════════════════════════════════════
+let db = null, stations = [], kb = [], incidents = [];
+let editingKbId = null, kbScopeMode = 'global';
+let pendingUploadEntries = [], selectedTargets = new Set();
+const FB_CONFIG_KEY = 'mgr_fb_config';
+
+// ════════════════════════════════════════
+// FIREBASE CONNECT
+// ════════════════════════════════════════
+window.connectFirebase = async function() {
+  const cfg = {
+    apiKey:    document.getElementById('fbApiKey').value.trim(),
+    authDomain:document.getElementById('fbAuthDomain').value.trim(),
+    projectId: document.getElementById('fbProjectId').value.trim(),
+    appId:     document.getElementById('fbAppId').value.trim(),
+  };
+  if(!cfg.apiKey || !cfg.projectId){ setFbStatus('Please fill in all fields.','err'); return; }
+  setFbStatus('Connecting…','');
+  try {
+    const app = initializeApp(cfg);
+    db = getFirestore(app);
+    // test write
+    await setDoc(doc(db,'_ping','test'),{t: Date.now()});
+    localStorage.setItem(FB_CONFIG_KEY, JSON.stringify(cfg));
+    setFbStatus('✅ Connected!','ok');
+    setTimeout(()=>{ document.getElementById('fbSetup').style.display='none'; launchDashboard(); }, 800);
+  } catch(e) {
+    setFbStatus('❌ Connection failed: '+e.message,'err');
+  }
+};
+
+function setFbStatus(msg,cls){ const el=document.getElementById('fbStatus'); el.textContent=msg; el.className='fb-status'+(cls?' '+cls:''); }
+
+window.reconfigure = function(){ document.getElementById('fbSetup').style.display='flex'; }
+
+// ════════════════════════════════════════
+// AUTO-RECONNECT
+// ════════════════════════════════════════
+async function tryAutoConnect() {
+  const saved = localStorage.getItem(FB_CONFIG_KEY);
+  if(!saved) return;
+  try {
+    const cfg = JSON.parse(saved);
+    const app = initializeApp(cfg);
+    db = getFirestore(app);
+    document.getElementById('fbApiKey').value    = cfg.apiKey;
+    document.getElementById('fbAuthDomain').value= cfg.authDomain;
+    document.getElementById('fbProjectId').value = cfg.projectId;
+    document.getElementById('fbAppId').value     = cfg.appId;
+    document.getElementById('fbSetup').style.display='none';
+    launchDashboard();
+  } catch(e){ /* show setup */ }
+}
+
+// ════════════════════════════════════════
+// LAUNCH
+// ════════════════════════════════════════
+function launchDashboard() {
+  setSyncStatus(true);
+  listenStations();
+  listenKb();
+  listenIncidents();
+}
+
+function setSyncStatus(online){
+  document.getElementById('syncDot').className='sync-dot'+(online?'':' offline');
+  document.getElementById('syncLabel').textContent=online?'Live sync active':'Disconnected';
+}
+
+// ════════════════════════════════════════
+// REALTIME LISTENERS
+// ════════════════════════════════════════
+function listenStations(){
+  onSnapshot(collection(db,'stations'), snap=>{
+    stations = snap.docs.map(d=>({id:d.id,...d.data()}));
+    if(!stations.length) seedDefaultStations();
+    else refreshAll();
+  });
+}
+function listenKb(){
+  onSnapshot(query(collection(db,'kb'),orderBy('createdAt','desc')), snap=>{
+    kb = snap.docs.map(d=>({id:d.id,...d.data()}));
+    refreshAll();
+  });
+}
+function listenIncidents(){
+  onSnapshot(query(collection(db,'incidents'),orderBy('timestamp','desc')), snap=>{
+    incidents = snap.docs.map(d=>({id:d.id,...d.data()}));
+    refreshAll();
+  });
+}
+
+async function seedDefaultStations(){
+  const names=['Station 1','Station 2','Station 3','Station 4','Station 5','Station 6','Station 7','Station 8','Station 9','Station 10','Station 11','Station 12','Station 13','Station 14','Station 15'];
+  for(const name of names) await addDoc(collection(db,'stations'),{name,createdAt:serverTimestamp()});
+}
+
+// ════════════════════════════════════════
+// REFRESH ALL UI
+// ════════════════════════════════════════
+function refreshAll(){
+  updateBadge();
+  updateOverview();
+  renderKbTable();
+  renderIncTable();
+  renderStationsFull();
+  populateStationDropdowns();
+}
+
+function updateBadge(){
+  const open = incidents.filter(i=>!i.resolved).length;
+  const badge = document.getElementById('openBadge');
+  badge.style.display = open ? 'inline' : 'none';
+  badge.textContent = open;
+}
+
+// ════════════════════════════════════════
+// OVERVIEW
+// ════════════════════════════════════════
+function updateOverview(){
+  const open = incidents.filter(i=>!i.resolved).length;
+  const thirtyDaysAgo = Date.now() - 30*24*60*60*1000;
+  const resolved = incidents.filter(i=>i.resolved && (i.resolvedAt||0) > thirtyDaysAgo/1000).length;
+  document.getElementById('ovStations').textContent = stations.length;
+  document.getElementById('ovKb').textContent = kb.length;
+  document.getElementById('ovKbSub').textContent = `${kb.filter(e=>e.scope==='global').length} global · ${kb.filter(e=>e.scope==='local').length} station`;
+  document.getElementById('ovOpen').textContent = open;
+  document.getElementById('ovResolved').textContent = resolved;
+
+  // stations grid
+  const grid = document.getElementById('overviewStationsGrid');
+  grid.innerHTML = stations.map(s=>`
+    <div class="station-card" onclick="filterAndShowIncidents('${esc(s.name)}')">
+      <div class="station-card-top">
+        <div class="station-icon">⛽</div>
+        <div class="station-online"></div>
+      </div>
+      <div class="station-name">${esc(s.name)}</div>
+      <div class="station-stats">
+        <div class="sstat">KB: <span>${kb.filter(e=>e.scope==='local'&&e.station===s.name).length}</span></div>
+        <div class="sstat">Inc: <span>${incidents.filter(i=>i.station===s.name&&!i.resolved).length} open</span></div>
+      </div>
+    </div>`).join('');
+
+  // recent incidents (top 6)
+  const ri = document.getElementById('recentIncidents');
+  const recent = [...incidents].filter(i=>!i.resolved).slice(0,6);
+  if(!recent.length){ ri.innerHTML='<div style="color:var(--muted2);font-size:13px;padding:16px 0;">No open incidents 🎉</div>'; return; }
+  ri.innerHTML = recent.map(i=>`
+    <div class="ri-row">
+      <span class="ri-badge badge-${i.severity||'low'}">${(i.severity||'low').toUpperCase()}</span>
+      <div class="ri-info">
+        <div class="ri-title">${esc(i.type||'')} <span style="color:var(--purple);font-size:11px;font-weight:600;">📍${esc(i.station||'')}</span></div>
+        <div class="ri-meta">👤 ${esc(i.staff||'Unknown')} · ${fmtTime(i.timestamp)}</div>
+      </div>
+      <button class="ri-resolve" onclick="resolveInc('${i.id}')">Resolve</button>
+    </div>`).join('');
+}
+
+// ════════════════════════════════════════
+// KB TABLE
+// ════════════════════════════════════════
+window.renderKbTable = function(){
+  const search = (document.getElementById('kbSearch')?.value||'').toLowerCase();
+  const scopeF = document.getElementById('kbScopeFilter')?.value||'all';
+  const stnF   = document.getElementById('kbStationFilter')?.value||'all';
+  const catF   = document.getElementById('kbCatFilter')?.value||'all';
+
+  let entries = kb;
+  if(scopeF==='global') entries=entries.filter(e=>e.scope==='global');
+  if(scopeF==='local')  entries=entries.filter(e=>e.scope==='local');
+  if(stnF!=='all')      entries=entries.filter(e=>e.scope==='global'||e.station===stnF);
+  if(catF!=='all')      entries=entries.filter(e=>e.category===catF);
+  if(search) entries=entries.filter(e=>(e.question||'').toLowerCase().includes(search)||(e.answer||'').toLowerCase().includes(search));
+
+  const tbody = document.getElementById('kbTbody');
+  if(!entries.length){ tbody.innerHTML='<tr class="empty-row"><td colspan="5">No entries found.</td></tr>'; return; }
+  tbody.innerHTML = entries.map(e=>`
+    <tr>
+      <td><span class="scope-pill ${e.scope==='global'?'sp-global':'sp-local'}">${e.scope==='global'?'🌐 Global':'📍 '+esc(e.station||'')}</span></td>
+      <td><span class="cat-pill">${esc(e.category||'')}</span></td>
+      <td style="max-width:220px">${esc(e.question||'')}</td>
+      <td style="max-width:260px;color:var(--muted2)">${esc((e.answer||'').slice(0,80))}${(e.answer||'').length>80?'…':''}</td>
+      <td><div class="td-actions">
+        <button class="btn-xs edit" onclick="openKbEdit('${e.id}')" title="Edit">✏️</button>
+        <button class="btn-xs del"  onclick="delKb('${e.id}')" title="Delete">🗑️</button>
+      </div></td>
+    </tr>`).join('');
+};
+
+// ════════════════════════════════════════
+// KB MODAL
+// ════════════════════════════════════════
+window.openKbModal = function(){
+  editingKbId=null;
+  document.getElementById('kbModalTitle').textContent='Add Knowledge Entry';
+  document.getElementById('fCat').value='GAP POS';
+  document.getElementById('fQ').value='';
+  document.getElementById('fA').value='';
+  setScopeOpt('global');
+  document.getElementById('kbModal').classList.add('open');
+};
+window.openKbEdit = function(id){
+  const e=kb.find(x=>x.id===id); if(!e) return;
+  editingKbId=id;
+  document.getElementById('kbModalTitle').textContent='Edit Entry';
+  document.getElementById('fCat').value=e.category||'GAP POS';
+  document.getElementById('fQ').value=e.question||'';
+  document.getElementById('fA').value=e.answer||'';
+  setScopeOpt(e.scope||'global');
+  if(e.scope==='local') document.getElementById('fStation').value=e.station||'';
+  document.getElementById('kbModal').classList.add('open');
+};
+window.closeKbModal = function(){ document.getElementById('kbModal').classList.remove('open'); };
+
+window.setScopeOpt = function(s){
+  kbScopeMode=s;
+  document.getElementById('soGlobal').className='scope-opt'+(s==='global'?' ag':'');
+  document.getElementById('soLocal').className='scope-opt'+(s==='local'?' al':'');
+  document.getElementById('stationFieldWrap').style.display=s==='local'?'block':'none';
+};
+
+window.saveKbEntry = async function(){
+  const cat=document.getElementById('fCat').value,
+        q=document.getElementById('fQ').value.trim(),
+        a=document.getElementById('fA').value.trim();
+  if(!q||!a){ showToast('Please fill in question and answer.','err'); return; }
+  const entry={category:cat,question:q,answer:a,scope:kbScopeMode,updatedAt:serverTimestamp()};
+  if(kbScopeMode==='local') entry.station=document.getElementById('fStation').value;
+  try{
+    if(editingKbId) await updateDoc(doc(db,'kb',editingKbId),entry);
+    else { entry.createdAt=serverTimestamp(); await addDoc(collection(db,'kb'),entry); }
+    closeKbModal();
+    showToast(kbScopeMode==='global'?'🌐 Global entry synced to all stations!':'📍 Station entry saved!');
+  }catch(e){ showToast('Error: '+e.message,'err'); }
+};
+
+window.delKb = async function(id){
+  if(!confirm('Delete this entry? It will be removed from all stations instantly.')) return;
+  try{ await deleteDoc(doc(db,'kb',id)); showToast('🗑️ Entry deleted'); }
+  catch(e){ showToast('Error: '+e.message,'err'); }
+};
+
+// ════════════════════════════════════════
+// INCIDENTS TABLE
+// ════════════════════════════════════════
+window.renderIncTable = function(){
+  const search=(document.getElementById('incSearch')?.value||'').toLowerCase();
+  const stnF=document.getElementById('incStationFilter')?.value||'all';
+  const sevF=document.getElementById('incSevFilter')?.value||'all';
+  const stF=document.getElementById('incStatusFilter')?.value||'all';
+
+  let rows=[...incidents];
+  if(stnF!=='all') rows=rows.filter(i=>i.station===stnF);
+  if(sevF!=='all') rows=rows.filter(i=>i.severity===sevF);
+  if(stF==='open') rows=rows.filter(i=>!i.resolved);
+  if(stF==='resolved') rows=rows.filter(i=>i.resolved);
+  if(search) rows=rows.filter(i=>(i.description||'').toLowerCase().includes(search)||(i.type||'').toLowerCase().includes(search)||(i.station||'').toLowerCase().includes(search));
+
+  const SEV={high:'🔴 HIGH',med:'🟡 MED',low:'🟢 LOW'};
+  const tbody=document.getElementById('incTbody');
+  if(!rows.length){ tbody.innerHTML='<tr class="empty-row"><td colspan="8">No incidents found.</td></tr>'; return; }
+  tbody.innerHTML=rows.map(i=>`
+    <tr>
+      <td><span class="stn-pill">📍${esc(i.station||'')}</span></td>
+      <td style="white-space:nowrap;font-size:11.5px">${fmtTime(i.timestamp)}</td>
+      <td>${esc(i.type||'')}</td>
+      <td><span class="ri-badge badge-${i.severity||'low'}">${SEV[i.severity]||'—'}</span></td>
+      <td>${esc(i.staff||'—')}</td>
+      <td style="max-width:200px;color:var(--muted2)">${esc((i.description||'').slice(0,70))}${(i.description||'').length>70?'…':''}</td>
+      <td><span class="${i.resolved?'status-resolved':'status-open'}">${i.resolved?'✅ Resolved':'🔴 Open'}</span></td>
+      <td>${!i.resolved?`<button class="ri-resolve" onclick="resolveInc('${i.id}')">Resolve</button>`:'—'}</td>
+    </tr>`).join('');
+};
+
+window.resolveInc = async function(id){
+  try{ await updateDoc(doc(db,'incidents',id),{resolved:true,resolvedAt:Date.now()}); showToast('✅ Incident resolved'); }
+  catch(e){ showToast('Error: '+e.message,'err'); }
+};
+
+window.filterAndShowIncidents = function(stn){
+  showView('incidents');
+  document.getElementById('incStationFilter').value=stn;
+  renderIncTable();
+};
+
+// ════════════════════════════════════════
+// STATIONS FULL LIST
+// ════════════════════════════════════════
+function renderStationsFull(){
+  const list=document.getElementById('stationsListFull');
+  list.innerHTML=stations.map((s,i)=>`
+    <div class="stn-row-full">
+      <div class="stn-num">${i+1}</div>
+      <div class="stn-info">
+        <h3>${esc(s.name)}</h3>
+        <div class="stn-stats-row">
+          <div class="stn-stat">Global KB: <strong>${kb.filter(e=>e.scope==='global').length}</strong></div>
+          <div class="stn-stat">Station KB: <strong>${kb.filter(e=>e.scope==='local'&&e.station===s.name).length}</strong></div>
+          <div class="stn-stat">Open Incidents: <strong>${incidents.filter(i=>i.station===s.name&&!i.resolved).length}</strong></div>
+        </div>
+      </div>
+      <div class="stn-actions">
+        <button class="btn-sm" onclick="filterAndShowIncidents('${esc(s.name)}')">📋 Incidents</button>
+        <button class="btn-sm" onclick="filterKbByStation('${esc(s.name)}')">🗂️ KB</button>
+        <button class="btn-sm" onclick="openRenameStation('${s.id}','${esc(s.name)}')">✏️ Rename</button>
+        <button class="btn-sm danger" onclick="deleteStation('${s.id}','${esc(s.name)}')">Delete</button>
+      </div>
+    </div>`).join('');
+}
+
+// ════════════════════════════════════════
+// RENAME STATION
+// ════════════════════════════════════════
+let renamingStnId = null;
+window.openRenameStation = function(id, name){
+  renamingStnId = id;
+  document.getElementById('renameStnOld').value = name;
+  document.getElementById('renameStnNew').value = name;
+  document.getElementById('renameStnModal').classList.add('open');
+  setTimeout(()=>{ const inp=document.getElementById('renameStnNew'); inp.focus(); inp.select(); }, 100);
+};
+
+window.confirmRenameStation = async function(){
+  const newName = document.getElementById('renameStnNew').value.trim();
+  const oldName = document.getElementById('renameStnOld').value.trim();
+  if(!newName){ showToast('Please enter a new name.','err'); return; }
+  if(newName === oldName){ document.getElementById('renameStnModal').classList.remove('open'); return; }
+  if(stations.find(s=>s.name===newName)){ showToast('A station with that name already exists.','err'); return; }
+  try{
+    // Update station document
+    await updateDoc(doc(db,'stations',renamingStnId),{name:newName});
+    // Update all local KB entries that reference the old name
+    const kbToUpdate = kb.filter(e=>e.scope==='local'&&e.station===oldName);
+    for(const e of kbToUpdate) await updateDoc(doc(db,'kb',e.id),{station:newName});
+    // Update all incidents that reference the old name
+    const incToUpdate = incidents.filter(i=>i.station===oldName);
+    for(const i of incToUpdate) await updateDoc(doc(db,'incidents',i.id),{station:newName});
+    document.getElementById('renameStnModal').classList.remove('open');
+    showToast(`✅ Renamed to "${newName}" — KB & incidents updated`);
+  }catch(e){ showToast('Error: '+e.message,'err'); }
+};
+
+window.filterKbByStation = function(name){
+  showView('kb');
+  document.getElementById('kbStationFilter').value=name;
+  renderKbTable();
+};
+
+window.deleteStation = async function(id,name){
+  if(!confirm(`Delete station "${name}"? KB entries and incidents will remain but unlinked.`)) return;
+  try{ await deleteDoc(doc(db,'stations',id)); showToast('🗑️ Station deleted'); }
+  catch(e){ showToast('Error: '+e.message,'err'); }
+};
+
+window.addStation = async function(){
+  const name=document.getElementById('newStnName').value.trim();
+  if(!name){ showToast('Please enter a station name.','err'); return; }
+  try{
+    await addDoc(collection(db,'stations'),{name,createdAt:serverTimestamp()});
+    document.getElementById('newStnName').value='';
+    document.getElementById('stnModal').classList.remove('open');
+    showToast('✅ Station added: '+name);
+  }catch(e){ showToast('Error: '+e.message,'err'); }
+};
+
+// ════════════════════════════════════════
+// UPLOAD / IMPORT
+// ════════════════════════════════════════
+window.handleDrop = function(e){
+  e.preventDefault();
+  document.getElementById('dropzone').classList.remove('drag');
+  const file=e.dataTransfer.files[0];
+  if(file) processUploadFile(file);
+};
+window.handleFileSelect = function(input){
+  if(input.files[0]) processUploadFile(input.files[0]);
+};
+
+function processUploadFile(file){
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      let entries=[];
+      if(file.name.endsWith('.json')){
+        entries=JSON.parse(e.target.result);
+        if(!Array.isArray(entries)) throw new Error('JSON must be an array');
+      } else {
+        // CSV parse
+        const lines=e.target.result.split('\n').filter(l=>l.trim());
+        const headers=lines[0].split(',').map(h=>h.replace(/"/g,'').trim().toLowerCase());
+        for(let i=1;i<lines.length;i++){
+          const cols=lines[i].match(/(".*?"|[^,]+)(?=,|$)/g)||[];
+          const row={};
+          headers.forEach((h,j)=>row[h]=(cols[j]||'').replace(/^"|"$/g,'').trim());
+          if(row.question&&row.answer) entries.push({category:row.category||'Other',question:row.question,answer:row.answer});
+        }
+      }
+      if(!entries.length) throw new Error('No valid entries found');
+      pendingUploadEntries=entries;
+      document.getElementById('upFilename').textContent=file.name;
+      document.getElementById('upCount').textContent=entries.length+' entries ready';
+      buildTargetChips();
+      document.getElementById('uploadPreview').classList.add('show');
+      showToast('📂 File loaded: '+entries.length+' entries ready to push');
+    }catch(err){ showToast('Error reading file: '+err.message,'err'); }
+  };
+  reader.readAsText(file);
+}
+
+function buildTargetChips(){
+  selectedTargets=new Set();
+  const chips=document.getElementById('targetChips');
+  chips.innerHTML=`<div class="target-chip all-chip" onclick="toggleTarget('__all__',this)">🌐 All Stations (Global)</div>`
+    +stations.map(s=>`<div class="target-chip" onclick="toggleTarget('${esc(s.name)}',this)">📍 ${esc(s.name)}</div>`).join('');
+}
+window.toggleTarget=function(name,el){
+  if(selectedTargets.has(name)){ selectedTargets.delete(name); el.classList.remove('selected','all-chip'[0]); el.classList.remove('selected'); }
+  else { selectedTargets.add(name); el.classList.add('selected'); }
+  document.getElementById('sendUploadBtn').disabled=selectedTargets.size===0;
+};
+
+window.sendUpload = async function(){
+  if(!pendingUploadEntries.length||!selectedTargets.size){ showToast('Select at least one target station.','err'); return; }
+  document.getElementById('sendUploadBtn').disabled=true;
+  document.getElementById('sendUploadBtn').textContent='Pushing…';
+  let count=0;
+  try{
+    for(const entry of pendingUploadEntries){
+      if(selectedTargets.has('__all__')){
+        await addDoc(collection(db,'kb'),{...entry,scope:'global',createdAt:serverTimestamp()});
+        count++;
+      } else {
+        for(const stn of selectedTargets){
+          await addDoc(collection(db,'kb'),{...entry,scope:'local',station:stn,createdAt:serverTimestamp()});
+          count++;
+        }
+      }
+    }
+    showToast(`🚀 Pushed ${count} entries to ${selectedTargets.size} target(s)!`);
+    document.getElementById('uploadPreview').classList.remove('show');
+    pendingUploadEntries=[];
+  }catch(e){ showToast('Error: '+e.message,'err'); }
+  document.getElementById('sendUploadBtn').disabled=false;
+  document.getElementById('sendUploadBtn').textContent='🚀 Push to Selected Stations';
+};
+
+window.submitManualEntry = async function(){
+  const target=document.getElementById('pasteTarget').value;
+  const cat=document.getElementById('pasteCat').value;
+  const q=document.getElementById('pasteQ').value.trim();
+  const a=document.getElementById('pasteA').value.trim();
+  if(!q||!a){ showToast('Please fill in question and answer.','err'); return; }
+  const entry={category:cat,question:q,answer:a,createdAt:serverTimestamp()};
+  if(target==='global') entry.scope='global';
+  else { entry.scope='local'; entry.station=target; }
+  try{
+    await addDoc(collection(db,'kb'),entry);
+    document.getElementById('pasteQ').value='';
+    document.getElementById('pasteA').value='';
+    showToast(target==='global'?'🌐 Pushed to all stations!':'📍 Added to '+target+'!');
+  }catch(e){ showToast('Error: '+e.message,'err'); }
+};
+
+// ════════════════════════════════════════
+// DROPDOWN POPULATION
+// ════════════════════════════════════════
+function populateStationDropdowns(){
+  const opts=stations.map(s=>`<option value="${esc(s.name)}">${esc(s.name)}</option>`).join('');
+  const allOpt='<option value="all">All Stations</option>';
+  ['kbStationFilter','incStationFilter'].forEach(id=>{
+    const el=document.getElementById(id); if(!el) return;
+    const val=el.value;
+    el.innerHTML=allOpt+opts;
+    el.value=val;
+  });
+  const fStation=document.getElementById('fStation');
+  if(fStation) fStation.innerHTML=opts;
+
+  const pasteTarget=document.getElementById('pasteTarget');
+  if(pasteTarget) pasteTarget.innerHTML=`<option value="global">🌐 All Stations (Global)</option>`+opts;
+}
+
+// ════════════════════════════════════════
+// EXPORT
+// ════════════════════════════════════════
+window.exportIncCSV = function(){
+  const rows=[['Station','Date','Staff','Type','Severity','Description','Status'],...incidents.map(i=>[i.station||'',fmtTime(i.timestamp),i.staff||'',i.type||'',i.severity||'',`"${(i.description||'').replace(/"/g,'""')}"`,i.resolved?'Resolved':'Open'])];
+  dlFile('incidents-all-stations.csv',rows.map(r=>r.join(',')).join('\n'),'text/csv');
+  showToast('📊 Incidents exported as CSV');
+};
+window.exportIncPrint = function(){
+  const SEV={high:'🔴 HIGH',med:'🟡 MEDIUM',low:'🟢 LOW'};
+  const w=window.open('','_blank');
+  w.document.write(`<html><head><title>Incident Report — All Stations</title><style>body{font-family:Arial,sans-serif;padding:30px;max-width:900px;margin:auto;}h1{color:#FF6B00;border-bottom:2px solid #FF6B00;padding-bottom:8px;}table{width:100%;border-collapse:collapse;margin-top:16px;}th{background:#f5f5f5;padding:9px 12px;text-align:left;font-size:12px;border-bottom:2px solid #ddd;}td{padding:9px 12px;font-size:12px;border-bottom:1px solid #eee;vertical-align:top;}.stn{color:#B06EFF;font-weight:bold;}.open{color:red;}.resolved{color:green;}</style></head><body>`);
+  w.document.write(`<h1>📋 Incident Report — All Stations</h1><p style="color:#999;font-size:12px">Exported ${new Date().toLocaleDateString('en-AU')} · ${incidents.length} total incidents</p>`);
+  w.document.write('<table><thead><tr><th>Station</th><th>Date</th><th>Type</th><th>Severity</th><th>Staff</th><th>Description</th><th>Status</th></tr></thead><tbody>');
+  incidents.forEach(i=>w.document.write(`<tr><td class="stn">📍${i.station||''}</td><td style="white-space:nowrap">${fmtTime(i.timestamp)}</td><td>${i.type||''}</td><td>${SEV[i.severity]||''}</td><td>${i.staff||''}</td><td>${(i.description||'').replace(/\n/g,'<br>')}</td><td class="${i.resolved?'resolved':'open'}">${i.resolved?'✅ Resolved':'🔴 Open'}</td></tr>`));
+  w.document.write('</tbody></table></body></html>'); w.document.close(); w.print();
+};
+
+function dlFile(name,content,type){ const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([content],{type})); a.download=name; a.click(); }
+
+// ════════════════════════════════════════
+// NAV + TOPBAR
+// ════════════════════════════════════════
+const VIEW_META = {
+  overview:{title:'Dashboard',meta:'Real-time overview',actions:`<button class="btn-s" onclick="document.getElementById('stnModal').classList.add('open')">＋ Add Station</button>`},
+  kb:{title:'Knowledge Base',meta:'All entries',actions:`<button class="btn-p" onclick="openKbModal()">＋ Add Entry</button><button class="btn-s" onclick="exportKbCSV()">📊 Export</button>`},
+  upload:{title:'Upload / Import',meta:'Push knowledge to stations',actions:''},
+  incidents:{title:'Incident Log',meta:'All stations',actions:`<button class="btn-p" onclick="exportIncCSV()">📊 Export CSV</button><button class="btn-s" onclick="exportIncPrint()">🖨️ Print</button>`},
+  stations:{title:'Manage Stations',meta:'',actions:`<button class="btn-p" onclick="document.getElementById('stnModal').classList.add('open')">＋ Add Station</button>`},
+};
+
+window.showView = function(name){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('view-'+name).classList.add('active');
+  document.getElementById('nav-'+name).classList.add('active');
+  const m=VIEW_META[name]||{};
+  document.getElementById('topbarTitle').textContent=m.title||name;
+  document.getElementById('topbarMeta').textContent=m.meta||'';
+  document.getElementById('topbarActions').innerHTML=m.actions||'';
+};
+
+window.exportKbCSV = function(){
+  const rows=[['Scope','Station','Category','Question','Answer'],...kb.map(e=>[e.scope||'global',e.station||'All',e.category||'',`"${(e.question||'').replace(/"/g,'""')}"`,`"${(e.answer||'').replace(/"/g,'""')}"`])];
+  dlFile('knowledge-base.csv',rows.map(r=>r.join(',')).join('\n'),'text/csv');
+  showToast('📊 KB exported as CSV');
+};
+
+// ════════════════════════════════════════
+// UTILS
+// ════════════════════════════════════════
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function fmtTime(ts){ if(!ts) return '—'; const d=new Date(typeof ts==='object'?ts.toDate?.()??ts:ts*1000); return isNaN(d)?'—':d.toLocaleDateString('en-AU',{day:'2-digit',month:'short'})+' '+d.toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'}); }
+function showToast(msg,type=''){
+  const t=document.getElementById('toast'); t.textContent=msg; t.className='toast'+(type?' '+type:'');
+  void t.offsetWidth; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),3200);
+}
+
+// ════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════
+window.setScopeOpt('global');
+document.getElementById('stationFieldWrap').style.display='none';
+tryAutoConnect();
+</script>
+</body>
+</html>
